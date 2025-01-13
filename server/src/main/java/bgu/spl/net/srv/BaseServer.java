@@ -1,11 +1,14 @@
 package bgu.spl.net.srv;
 
+
 import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.MessagingProtocol;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.function.Supplier;
+import bgu.spl.net.srv.ConnectionsImpl;
+import bgu.spl.net.srv.Connections;
 
 public abstract class BaseServer<T> implements Server<T> {
 
@@ -13,6 +16,8 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<MessagingProtocol<T>> protocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ServerSocket sock;
+    private final ConnectionsImpl<T> connections;                    
+    private int connectionIdCounter = 0;
 
     public BaseServer(
             int port,
@@ -23,6 +28,7 @@ public abstract class BaseServer<T> implements Server<T> {
         this.protocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
+        this.connections = new ConnectionsImpl<>(); 
     }
 
     @Override
@@ -40,7 +46,10 @@ public abstract class BaseServer<T> implements Server<T> {
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
                         clientSock,
                         encdecFactory.get(),
-                        protocolFactory.get());
+                        protocolFactory.get(),
+                        connections,
+                        connectionIdCounter++);                      // Assign unique connectionId
+                execute(handler);
 
                 execute(handler);
             }
