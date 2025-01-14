@@ -2,6 +2,7 @@ package bgu.spl.net.srv;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.MessagingProtocol;
+import bgu.spl.net.impl.stomp.StompFrame;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,10 +55,11 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
                     while (buf.hasRemaining()) {
                         T nextMessage = encdec.decodeNextByte(buf.get());
                         if (nextMessage != null) {
-                            T response = protocol.process(nextMessage);
-                            if (response != null) {
-                                writeQueue.add(ByteBuffer.wrap(encdec.encode(response)));
-                                reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                            if (nextMessage instanceof String) {
+                                StompFrame frame = StompFrame.parse((String) nextMessage);
+                                protocol.process((T) frame); // Cast to T, assuming StompFrame<T>
+                            } else {
+                                protocol.process(nextMessage);
                             }
                         }
                     }

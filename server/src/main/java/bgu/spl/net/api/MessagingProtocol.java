@@ -1,4 +1,5 @@
 package bgu.spl.net.api;
+import bgu.spl.net.srv.Connections;
 
 public interface MessagingProtocol<T> {
     

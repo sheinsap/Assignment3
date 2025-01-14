@@ -11,7 +11,7 @@ public class StompServer {
         if ("tpc".equals(serverType)) {
             Server.threadPerClient(
                 port,
-                () -> new StompMessagingProtocolImpl(), // Protocol factory
+                () -> new StompProtocol(), // Protocol factory
                 () -> new StompEncoderDecoder()         // Encoder/Decoder factory
             ).serve();
         } else if ("reactor".equals(serverType)) {

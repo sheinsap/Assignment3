@@ -2,6 +2,8 @@ package bgu.spl.net.srv;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.MessagingProtocol;
+import bgu.spl.net.impl.stomp.StompFrame;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -39,7 +41,13 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
                 T nextMessage = encdec.decodeNextByte((byte) read);
                 if (nextMessage != null) {
-                    protocol.process(nextMessage);
+                    // Parse the raw message if necessary
+                    if (nextMessage instanceof String) {
+                        StompFrame frame = StompFrame.parse((String) nextMessage);
+                        protocol.process((T) frame); // Cast to T, assuming StompFrame<T>
+                    } else {
+                        protocol.process(nextMessage);
+                    }
                 }
             }
 
