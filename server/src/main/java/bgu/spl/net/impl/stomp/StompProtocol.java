@@ -15,6 +15,8 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     private boolean shouldTerminate = false;  
     private static final AtomicInteger messageIdCounter = new AtomicInteger(1); // For unique message IDs
     private static final ConcurrentHashMap<Integer, ConcurrentHashMap<String, String>> subscriptions = new ConcurrentHashMap<>(); // A map of topics this client is subscribed to, along with their subscription IDs
+    private static final ConcurrentHashMap<String, String> users = new ConcurrentHashMap<>(); // A map of users and their passwords
+    private static final ConcurrentHashMap<Integer, String> loggedInUsers = new ConcurrentHashMap<>(); // A map of contains logged-in users (connectionId, username)
 
     public void start(int connectionId, Connections<StompFrame> connections){
         this.connectionId = connectionId;
@@ -65,23 +67,40 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
 
     //(!!!) should add a check if login and passcode are uniqe?
     private void handleConnect(StompFrame frame) {
-        if(frame.getHeader("accept-version") == null || frame.getHeader("host") == null ||
-         frame.getHeader("login") == null || frame.getHeader("passcode") == null){
+        String version = frame.getHeader("accept-version");
+        String host = frame.getHeader("host");
+        String username = frame.getHeader("login");
+        String password = frame.getHeader("passcode");
+        if(version == null || host == null || username == null || password == null){
             sendError("Missing a required header");
             return;
         }
         // Check that the version is "1.2"
-        if (!"1.2".equals(frame.getHeader("accept-version"))) {
+        if (!"1.2".equals(version)) {
             sendError("Unsupported STOMP version");
             return;
         }
         // Check that the host is "stomp.cs.bgu.ac.il"
-        if (!"stomp.cs.bgu.ac.il".equals(frame.getHeader("host"))) {
+        if (!"stomp.cs.bgu.ac.il".equals(host)) {
             sendError("Invalid host");
             return;
         }
+        // (!!!) needs to check if it is the right logic
+        if (loggedInUsers.containsKey(connectionId)) {
+            sendError("The client is already logged in, log out before trying again");
+            return;
+        }
+        if (users.containsKey(username) && !users.get(username).equals(password)) {
+            sendError("Wrong password");
+            return;
+        }
+        if (!users.containsKey(username)) {
+            users.put(username, password);
+        }
+        
 
         // If all checks pass, send the CONNECTED frame
+        loggedInUsers.put(connectionId, username);
         StompFrame connectedFrame = StompFrame.parse("CONNECTED\nversion:1.2\n\n\u0000");
         connections.send(connectionId, connectedFrame);
     }
@@ -140,6 +159,7 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     private void handleDisconnect(StompFrame frame) {
         
         subscriptions.remove(connectionId);
+        loggedInUsers.remove(connectionId);
         connections.disconnect(connectionId);
         shouldTerminate = true; // Mark connection for termination
     }
