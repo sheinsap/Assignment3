@@ -134,8 +134,9 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         
         String destination = frame.getHeader("destination");
         String id = frame.getHeader("id");
+        String receipt = frame.getHeader("receipt");
 
-        if (destination == null || id == null) {
+        if (destination == null || id == null || receipt == null) {
             sendError("Missing a required header");
             return;
         }
@@ -147,8 +148,9 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     private void handleUnsubscribe(StompFrame frame) {
     
         String id = frame.getHeader("id");
-        if (id == null) {
-            sendError("UNSUBSCRIBE frame must include an id header");
+        String receipt = frame.getHeader("receipt");
+        if (id == null || receipt == null) {
+            sendError("Missing a required header");
             return;
         }
 
@@ -161,6 +163,7 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         subscriptions.remove(connectionId);
         loggedInUsers.remove(connectionId);
         connections.disconnect(connectionId);
+        // (!!!) not sure if it is the right logic
         shouldTerminate = true; // Mark connection for termination
     }
 

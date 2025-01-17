@@ -1,6 +1,8 @@
 package bgu.spl.net.impl.stomp;
 
 import bgu.spl.net.srv.Server;
+import bgu.spl.net.impl.stomp.StompProtocol;
+import bgu.spl.net.impl.stomp.StompEncoderDecoder;
 
 public class StompServer {
 
@@ -12,10 +14,18 @@ public class StompServer {
             Server.threadPerClient(
                 port,
                 () -> new StompProtocol(), // Protocol factory
-                () -> new StompEncoderDecoder()         // Encoder/Decoder factory
+                () -> new StompEncoderDecoder()  // Encoder/Decoder factory
             ).serve();
         } else if ("reactor".equals(serverType)) {
-            // Reactor server setup (future step)
+            Server.reactor(
+                Runtime.getRuntime().availableProcessors(),
+                port,
+                () -> new StompProtocol(), // Protocol factory
+                () -> new StompEncoderDecoder()  // Encoder/Decoder factory
+            ).serve();
+        }
+        else{
+            System.out.println("Invalid server type");
         }
     }
 }
