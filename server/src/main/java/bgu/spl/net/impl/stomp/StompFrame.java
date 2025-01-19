@@ -27,10 +27,11 @@ public class StompFrame {
     }
 
     public static StompFrame parse(String frame) {
+        System.out.println("Parsing frame: " + frame); // Add this for debugging
         // Check if the frame ends with the null character
-        if (!frame.endsWith("\u0000")) {
-        return parse("ERROR\nmessage: Frame does not terminate with null character\n\n\u0000");
-        }
+        //if (!frame.endsWith("\0")) {
+        //return parse("ERROR\nmessage: Frame does not terminate with null character\n\n\u0000");
+        //}
 
         // Remove the null character before parsing
         frame = frame.substring(0, frame.length() - 1);
@@ -81,8 +82,8 @@ public class StompFrame {
             rawFrame.append(body);
         }
 
-        // Append the null character (\u0000) to terminate the frame
-        rawFrame.append("\u0000");
+        // Append the null character to terminate the frame
+        rawFrame.append("\0");
 
         return rawFrame.toString();
     }

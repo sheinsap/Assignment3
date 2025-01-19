@@ -12,7 +12,7 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<StompFrame> {
     @Override
     public StompFrame decodeNextByte(byte nextByte) {
         // Check if the frame is complete (null character \u0000 marks the end)
-        if (nextByte == '\u0000') {
+        if (nextByte == '\0') {
             byte[] frameBytes = new byte[buffer.size()];
             for (int i = 0; i < buffer.size(); i++) {
                 frameBytes[i] = buffer.get(i);
@@ -33,7 +33,7 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<StompFrame> {
         String rawFrame = message.toRawFrame();
 
         // Convert the raw string into bytes
-        return rawFrame.getBytes();
+        return (rawFrame + "\u0000").getBytes(StandardCharsets.UTF_8);
     }
 
 }
