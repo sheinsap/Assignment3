@@ -109,7 +109,12 @@ public class Reactor<T> implements Server<T> {
                 this,
                 connections,
                 connectionId); // Pass ConnectionsImpl
+
+        // Register the connection
+        connections.addConnection(handler.getConnectionId(), handler);
+        
         clientChan.register(selector, SelectionKey.OP_READ, handler);
+    
     }
 
     private void handleReadWrite(SelectionKey key) {

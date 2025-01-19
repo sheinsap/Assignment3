@@ -50,10 +50,12 @@ public abstract class BaseServer<T> implements Server<T> {
                         encdecFactory.get(),
                         protocolFactory.get(),
                         connections,
-                        connectionIdCounter++);                      // Assign unique connectionId
+                        connectionIdCounter++); // Assign unique connectionId
+                // Register the connection
+                connections.addConnection(handler.getConnectionId(), handler);
+                    
                 execute(handler);
 
-                execute(handler);
             }
         } catch (IOException ex) {
         }

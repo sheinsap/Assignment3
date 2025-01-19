@@ -1,6 +1,7 @@
 package bgu.spl.net.impl.stomp;
 
 import java.net.SocketOption;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,14 +15,11 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     private ConnectionsImpl<StompFrame> connections;  
     private boolean shouldTerminate = false;  
     private static final AtomicInteger messageIdCounter = new AtomicInteger(1); // For unique message IDs
-    private static final ConcurrentHashMap<Integer, ConcurrentHashMap<String, String>> subscriptions = new ConcurrentHashMap<>(); // A map of topics this client is subscribed to, along with their subscription IDs
-    private static final ConcurrentHashMap<String, String> users = new ConcurrentHashMap<>(); // A map of users and their passwords
-    private static final ConcurrentHashMap<Integer, String> loggedInUsers = new ConcurrentHashMap<>(); // A map of contains logged-in users (connectionId, username)
+   
 
     public void start(int connectionId, Connections<StompFrame> connections){
         this.connectionId = connectionId;
         this.connections = (ConnectionsImpl<StompFrame>) connections;
-        subscriptions.putIfAbsent(connectionId, new ConcurrentHashMap<>());
       
     }
     
@@ -30,16 +28,22 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         switch (frame.getCommand()) {
             case "CONNECT":
                 handleConnect(frame);
+                break;
             case "SEND":
                handleSend(frame);
+               break;
             case "SUBSCRIBE":
                 handleSubscribe(frame);
+                break;
             case "UNSUBSCRIBE":
                 handleUnsubscribe(frame);
+                break;
             case "DISCONNECT":
                 handleDisconnect(frame);
+                break;
             case "ERROR":
                 handleError(frame);
+                break;
             default:
                 sendError("Unknown command: " + frame.getCommand());
          }
@@ -85,35 +89,43 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
             sendError("Invalid host");
             return;
         }
-        // (!!!) needs to check if it is the right logic
-        if (loggedInUsers.containsKey(connectionId)) {
+        // Check if the client is already logged in
+        if (connections.isLoggedIn(connectionId)) {
             sendError("The client is already logged in, log out before trying again");
             return;
         }
-        if (users.containsKey(username) && !users.get(username).equals(password)) {
-            sendError("Wrong password");
-            return;
-        }
-        if (!users.containsKey(username)) {
-            users.put(username, password);
-        }
-        
 
-        // If all checks pass, send the CONNECTED frame
-        loggedInUsers.put(connectionId, username);
-        StompFrame connectedFrame = StompFrame.parse("CONNECTED\nversion:1.2\n\n\u0000");
+        // Check user 
+        if (connections.userExists(username)) {
+            if (connections.isUserLoggedIn(username)) {
+                sendError("User already logged in");
+                return;
+            }
+
+            if (!connections.isPasswordCorrect(username, password)) {
+                sendError("Wrong password");
+                return;
+            }
+        } else {
+            // New user
+            connections.addUser(username, password);
+            System.out.println("New user created: " + username);
+    }
+
+        // Log in the user
+        connections.login(connectionId, username, password);
+
+
+        StompFrame connectedFrame = StompFrame.parse("CONNECTED\nversion:1.2\n\n\0");
         connections.send(connectionId, connectedFrame);
+      
     }
 
     private void handleSend(StompFrame frame) {
-        // Logic for handling a SEND frame
+        
         String destination = frame.getHeader("destination");
         if (destination == null) {
             sendError("SEND frame must include a destination header");
-            return;
-        }
-        if (!connections.isSubscribed(destination, connectionId)) {
-            sendError("Client not subscribed to the destination: " + destination);
             return;
         }
 
@@ -122,7 +134,12 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
 
         // Broadcast the message to all subscribers
         for (int subscriberId : connections.getSubscribers(destination)) {
-            String subscriptionId = subscriptions.get(subscriberId).get(destination);
+            String subscriptionId = connections.getSubscriptionId(subscriberId, destination);
+            if (subscriptionId == null) {
+                sendError("No subscription found for destination: " + destination);
+                continue;
+            
+            }
             StompFrame messageFrame = StompFrame.parse("MESSAGE\nsubscription:" + subscriptionId + "\nmessage-id:" + messageId +
             "\ndestination:" + destination + "\n\n" + body + "\u0000");
     
@@ -132,36 +149,40 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
 
     private void handleSubscribe(StompFrame frame) {
         
-        String destination = frame.getHeader("destination");
-        String id = frame.getHeader("id");
+        String topic = frame.getHeader("destination");
+        String subscriptionId = frame.getHeader("id");
         String receipt = frame.getHeader("receipt");
 
-        if (destination == null || id == null || receipt == null) {
+        if (topic == null || subscriptionId == null || receipt == null) {
             sendError("Missing a required header");
             return;
         }
+        connections.subscribeClient(connectionId, topic, subscriptionId);
+        System.out.println("Connection " + connectionId + " subscribed to topic " + topic);
 
-        subscriptions.get(connectionId).put(destination, id);
-        connections.subscribe(destination, connectionId); // Add connectionId to the topic
     }
 
     private void handleUnsubscribe(StompFrame frame) {
-    
-        String id = frame.getHeader("id");
+        
+        String subscriptionId = frame.getHeader("id");
         String receipt = frame.getHeader("receipt");
-        if (id == null || receipt == null) {
+        if (subscriptionId == null || receipt == null) {
             sendError("Missing a required header");
             return;
         }
+        // Check if the subscription exists
+        String topic = connections.getTopicBySubscriptionId(connectionId, subscriptionId);
+        if (topic == null) {
+            sendError("Subscription does not exist or does not match");
+            return;
+        }
+        connections.unsubscribeClient(connectionId, subscriptionId);
+        System.out.println("Connection " + connectionId + " unsubscribed from topic " + topic + " with subscription ID " + subscriptionId);
 
-        subscriptions.get(connectionId).entrySet().removeIf(entry -> entry.getValue().equals(id));
-        connections.unsubscribe(id, connectionId);
     }
 
     private void handleDisconnect(StompFrame frame) {
         
-        subscriptions.remove(connectionId);
-        loggedInUsers.remove(connectionId);
         connections.disconnect(connectionId);
         // (!!!) not sure if it is the right logic
         shouldTerminate = true; // Mark connection for termination
