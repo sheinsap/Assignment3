@@ -108,6 +108,58 @@ public:
             "");
         }
 
+         if (command == "exit") {
+        std::string channel_name;
+        stream >> channel_name ;
+        return StompFrame(
+            "UNSUBSCRIBE",
+            {
+                {"destination:/", channel_name},
+                {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
+                {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
+            },
+            "");
+        }
+
+        ////(!!!) need to implement event parsing... 
+        //    if (command == "report") {
+        // std::string eventPath;
+        // stream >> eventPath ;
+        // return StompFrame(
+        //     "UNSUBSCRIBE",
+        //     {
+        //         {"destination:/", channel_name},
+        //         {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
+        //         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
+        //     },
+        //     "");
+        // }
+
+        ////(!!!) need to implement summery logic... 
+        //    if (command == "summary") {
+        // std::string eventPath;
+        // stream >> eventPath ;
+        // return StompFrame(
+        //     "UNSUBSCRIBE",
+        //     {
+        //         {"destination:/", channel_name},
+        //         {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
+        //         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
+        //     },
+        //     "");
+        // }
+
+        //(!!!) Once the client receives the RECEIPT frame, it should close the socket
+        //(!!!) and await further user commands.
+        if (command == "logout") {
+        return StompFrame(
+            "DISCONNECT",
+            {
+                {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
+            },
+            "");
+        }
+
     }
 
     // Convert the StompFrame object to a raw frame string
