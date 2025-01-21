@@ -12,7 +12,7 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<StompFrame> {
 
     @Override
     public StompFrame decodeNextByte(byte nextByte) {
-        // Check if the frame is complete (null character \u0000 marks the end)
+        // Check if the frame is complete (null character marks the end)
         if (nextByte == '\0') {
             byte[] frameBytes = new byte[buffer.size()];
             for (int i = 0; i < buffer.size(); i++) {

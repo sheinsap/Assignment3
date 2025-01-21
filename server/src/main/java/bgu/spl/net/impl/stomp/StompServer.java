@@ -13,15 +13,15 @@ public class StompServer {
         if ("tpc".equals(serverType)) {
             Server.threadPerClient(
                 port,
-                () -> new StompProtocol(), // Protocol factory
-                () -> new StompEncoderDecoder()  // Encoder/Decoder factory
+                () -> new StompProtocol(), 
+                () -> new StompEncoderDecoder()  
             ).serve();
         } else if ("reactor".equals(serverType)) {
             Server.reactor(
                 Runtime.getRuntime().availableProcessors(),
                 port,
-                () -> new StompProtocol(), // Protocol factory
-                () -> new StompEncoderDecoder()  // Encoder/Decoder factory
+                () -> new StompProtocol(), 
+                () -> new StompEncoderDecoder()  
             ).serve();
         }
         else{
