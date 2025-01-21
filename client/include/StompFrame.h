@@ -26,4 +26,7 @@ public:
 
     // Convert the StompFrame object to a raw frame string
     std::string toRawFrame() const;
+
+    static StompFrame parseEvent(Event& event);
+    
 };

@@ -99,4 +99,25 @@ public:
 
         return rawFrame.str();
     }
+
+    static StompFrame parseEvent(Event& event)
+    {   
+        std::map<std::string, std::string> general_information = event.get_general_information();  
+        std::string active = general_information["active"];
+        std::string forces_arrival = general_information["forces_arrival_at_scene"];
+        StompFrame frame = StompFrame(
+            "SEND",
+            {
+                {"destination:/", event.get_channel_name()},
+                {"user", event.getEventOwnerUser()},
+                {"city", event.get_city()},
+                {"event name", event.get_name()},
+                {"general information", ""},
+                {"    active",active },
+                {"    forces_arrival_at_scene", forces_arrival},
+                {"description", event.get_description()}
+            },"");
+    }
+
+    
 };
