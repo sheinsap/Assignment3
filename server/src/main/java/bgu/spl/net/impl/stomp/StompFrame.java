@@ -34,30 +34,33 @@ public class StompFrame {
         //}
 
         // Remove the null character before parsing
-        frame = frame.substring(0, frame.length() - 1);
+        //frame = frame.substring(0, frame.length() - 1);
 
         String[] lines = frame.split("\n"); // Split the frame into lines
         String command = lines[0];            // First line is the command
         Map<String, String> headers = new HashMap<>();
-        int i = 1;
-
-        // Parse headers until an empty line is encountered
-        while (i < lines.length && !lines[i].isEmpty()) {
-            String[] headerParts = lines[i].split(":");
-            if (headerParts.length != 2) {
-                return parse("ERROR\nmessage: Malformed header " + lines[i]+"\n\n\u0000");
-            }
-            headers.put(headerParts[0].trim(), headerParts[1].trim());
-            i++;
-        }
-
-        i++; // Skip the empty line between headers and body
-
-        // Parse the body
         StringBuilder body = new StringBuilder();
-        while (i < lines.length) {
-            body.append(lines[i]).append("\n");
-            i++;
+        boolean inBody = false;
+        
+        for (int i = 1; i < lines.length; i++) {
+            String line = lines[i];
+            if (!inBody) {
+                if (line.isEmpty()) {
+                    // Blank line indicates the start of the body
+                    inBody = true;
+                } else {
+                    String[] headerParts = lines[i].split(":");
+                    if (headerParts.length == 2) {
+                        headers.put(headerParts[0].trim(), headerParts[1].trim());
+                    } else {
+                        System.out.println("Malformed header: " + line);
+                    }
+                }
+            }
+            else{
+                // Handle embedded frames by unescaping \0
+                body.append(line.replace("\\0", "\0")).append("\n");
+            }
         }
 
         // Return a new StompFrame

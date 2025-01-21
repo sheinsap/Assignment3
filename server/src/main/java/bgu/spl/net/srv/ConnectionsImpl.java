@@ -37,6 +37,12 @@ public class ConnectionsImpl<T> implements Connections<T> {
     public void disconnect(int connectionId){
         lock.lock();
         try {
+            // Check if the connection is already removed
+            if (!connections.containsKey(connectionId)) {
+                System.out.println("Disconnect attempted for non-existent connection: " + connectionId);
+                return; // Already disconnected
+            }
+
             // Remove the user-specific subscriptions
             clientSubscriptions.remove(connectionId);
 
@@ -98,7 +104,8 @@ public class ConnectionsImpl<T> implements Connections<T> {
     // Subscription management
     public void subscribeClient(int connectionId, String topic, String subscriptionId) {
         
-        clientSubscriptions.putIfAbsent(connectionId, new ConcurrentHashMap<>()).put(topic, subscriptionId);
+        clientSubscriptions.putIfAbsent(connectionId, new ConcurrentHashMap<>());
+        clientSubscriptions.get(connectionId).put(topic, subscriptionId);
         subscribe(topic, connectionId);
     }
 

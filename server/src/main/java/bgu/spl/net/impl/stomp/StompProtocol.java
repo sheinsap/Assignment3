@@ -1,6 +1,7 @@
 package bgu.spl.net.impl.stomp;
 
 import java.net.SocketOption;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,7 +46,7 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
                 handleError(frame);
                 break;
             default:
-                sendError("Unknown command: " + frame.getCommand());
+                sendError("Unknown command: " + frame.getCommand(), frame, "");
          }
         // Handle receipt header if present
         if (frame.getHeader("receipt") != null) {
@@ -58,52 +59,69 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     }
 
     // Helper method to send an ERROR frame
-    private void sendError(String errorMessage) {
-        StompFrame errorFrame = StompFrame.parse("ERROR\nmessage: " + errorMessage + "\n\n\u0000");
+    private void sendError(String errorMessage, StompFrame frame, String description) {
+        // Construct the headers manually
+        Map<String, String> headers = new HashMap<>();
+        headers.put("message", errorMessage);
+
+        // Prepare the body with the embedded frame
+        String embeddedFrame = frame.toRawFrame();
+        if (embeddedFrame.endsWith("\0")) {
+            embeddedFrame = embeddedFrame.substring(0, embeddedFrame.length() - 1); // Remove the \0
+        }
+        // Escape \0 characters inside the embedded frame for readability
+        embeddedFrame = embeddedFrame.replace("\0", "\\0");
+
+        String errorBody = "The message: \n-----\n" + embeddedFrame + "----- \n" + description;
+
+        // Create the ERROR frame
+        StompFrame errorFrame = new StompFrame("ERROR", headers, errorBody);
+
+        // Send the ERROR frame
         connections.send(connectionId, errorFrame);
     }
 
+
     // Helper method to send a RECEIPT frame
     private void sendReceipt(String receiptId) {
-        StompFrame receiptFrame = StompFrame.parse("RECEIPT\nreceipt-id:" + receiptId + "\n\n\u0000");
+        StompFrame receiptFrame = StompFrame.parse("RECEIPT\nreceipt-id:" + receiptId + "\n\n\0");
         connections.send(connectionId, receiptFrame);
     }
 
-    //(!!!) should add a check if login and passcode are uniqe?
     private void handleConnect(StompFrame frame) {
         String version = frame.getHeader("accept-version");
         String host = frame.getHeader("host");
         String username = frame.getHeader("login");
         String password = frame.getHeader("passcode");
         if(version == null || host == null || username == null || password == null){
-            sendError("Missing a required header");
+            sendError("Missing a required header", frame, "");
             return;
         }
         // Check that the version is "1.2"
         if (!"1.2".equals(version)) {
-            sendError("Unsupported STOMP version");
+            sendError("Unsupported STOMP version", frame, "Version is not 1.2");
             return;
         }
         // Check that the host is "stomp.cs.bgu.ac.il"
         if (!"stomp.cs.bgu.ac.il".equals(host)) {
-            sendError("Invalid host");
+            sendError("Invalid host", frame, "Host is not stomp.cs.bgu.ac.il");
             return;
         }
         // Check if the client is already logged in
         if (connections.isLoggedIn(connectionId)) {
-            sendError("The client is already logged in, log out before trying again");
+            sendError("The client is already logged in, log out before trying again", frame, "Client is already logged in");
             return;
         }
 
         // Check user 
         if (connections.userExists(username)) {
             if (connections.isUserLoggedIn(username)) {
-                sendError("User already logged in");
+                sendError("User already logged in", frame, "User " + username + " is logged in somewhere else");
                 return;
             }
 
             if (!connections.isPasswordCorrect(username, password)) {
-                sendError("Wrong password");
+                sendError("Wrong password", frame, "User " + username + "'s password is different than what you inserted");
                 return;
             }
         } else {
@@ -125,9 +143,10 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         
         String destination = frame.getHeader("destination");
         if (destination == null) {
-            sendError("SEND frame must include a destination header");
+            sendError("SEND frame must include a destination header", frame, "");
             return;
         }
+        destination = destination.substring(1); // Remove the leading / from the destination
 
         String body = frame.getBody();
         int messageId = messageIdCounter.getAndIncrement(); // Generate a unique message ID
@@ -136,12 +155,12 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         for (int subscriberId : connections.getSubscribers(destination)) {
             String subscriptionId = connections.getSubscriptionId(subscriberId, destination);
             if (subscriptionId == null) {
-                sendError("No subscription found for destination: " + destination);
+                sendError("No subscription found for destination: " + destination, frame, "The sender is not subscribed to the topic " + destination);
                 continue;
             
             }
             StompFrame messageFrame = StompFrame.parse("MESSAGE\nsubscription:" + subscriptionId + "\nmessage-id:" + messageId +
-            "\ndestination:" + destination + "\n\n" + body + "\u0000");
+            "\ndestination:/" + destination + "\n\n" + body + "\0");
     
             connections.send(subscriberId, messageFrame); 
         }
@@ -154,7 +173,7 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         String receipt = frame.getHeader("receipt");
 
         if (topic == null || subscriptionId == null || receipt == null) {
-            sendError("Missing a required header");
+            sendError("Missing a required header", frame, "");
             return;
         }
         connections.subscribeClient(connectionId, topic, subscriptionId);
@@ -167,13 +186,13 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         String subscriptionId = frame.getHeader("id");
         String receipt = frame.getHeader("receipt");
         if (subscriptionId == null || receipt == null) {
-            sendError("Missing a required header");
+            sendError("Missing a required header", frame, "");
             return;
         }
         // Check if the subscription exists
         String topic = connections.getTopicBySubscriptionId(connectionId, subscriptionId);
         if (topic == null) {
-            sendError("Subscription does not exist or does not match");
+            sendError("Subscription does not exist or does not match", frame, "");
             return;
         }
         connections.unsubscribeClient(connectionId, subscriptionId);
@@ -182,9 +201,10 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     }
 
     private void handleDisconnect(StompFrame frame) {
-        
-        connections.disconnect(connectionId);
-        // (!!!) not sure if it is the right logic
+        if (!connections.isLoggedIn(connectionId)) {
+            System.out.println("Disconnect attempted for an already disconnected connection: " + connectionId);
+            return; // Avoid processing disconnect twice
+        }
         shouldTerminate = true; // Mark connection for termination
     }
 
