@@ -21,7 +21,8 @@ public:
     std::string getBody() const;
 
     // Static method to parse a raw frame string into a StompFrame object
-    static StompFrame parse(const std::string& frame);
+    //static StompFrame parse(const std::string& frame);
+    StompFrame parseFromServer(const std::string& frame);
 
     // Convert the StompFrame object to a raw frame string
     std::string toRawFrame() const;
