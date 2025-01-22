@@ -1,5 +1,6 @@
-#pragma once
-
+#ifndef STOMP_FRAME_H
+#define STOMP_FRAME_H
+#include "../include/event.h"
 #include <string>
 #include <map>
 #include <sstream>
@@ -22,7 +23,7 @@ public:
 
     // Static method to parse a raw frame string into a StompFrame object
     //static StompFrame parse(const std::string& frame);
-    StompFrame parseFromServer(const std::string& frame);
+    static StompFrame parseFromServer(const std::string& frame);
 
     // Convert the StompFrame object to a raw frame string
     std::string toRawFrame() const;
@@ -30,3 +31,4 @@ public:
     static StompFrame parseEvent(Event& event);
     
 };
+#endif

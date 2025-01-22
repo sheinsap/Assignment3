@@ -1,37 +1,31 @@
+
 #include <string>
 #include <map>
 #include <sstream>
 #include <iostream>
 #include "../include/event.h"
 #include "../include/SingletonCounter.h"
+#include "../include/StompFrame.h"
 
-
-class StompFrame {
-private:
-    std::string command;
-    std::map<std::string, std::string> headers;
-    std::string body;
-
-public:
     // Constructor
-    StompFrame(const std::string& command, const std::map<std::string, std::string>& headers, const std::string& body)
+    StompFrame::StompFrame(const std::string& command, const std::map<std::string, std::string>& headers, const std::string& body)
         : command(command), headers(headers), body(body) {}
 
     // Getters
-    std::string getCommand() const {
+    std::string StompFrame::getCommand() const {
         return command;
     }
 
-    std::string getHeader(const std::string& key) const {
+    std::string StompFrame::getHeader(const std::string& key) const {
         auto it = headers.find(key);
         return it != headers.end() ? it->second : "";
     }
 
-    std::string getBody() const {
+    std::string StompFrame::getBody() const {
         return body;
     }
 
-    StompFrame parseFromServer(const std::string& frame) {
+    StompFrame StompFrame::parseFromServer(const std::string& frame) {
         // Check if the frame ends with the null character
         if (frame.empty() || frame.back() != '\0') {
             return StompFrame("ERROR", {{"message", "Frame does not terminate with null character"}}, "");
@@ -75,7 +69,7 @@ public:
 
 
     // Convert the StompFrame object to a raw frame string
-    std::string toRawFrame() const {
+    std::string StompFrame::toRawFrame() const {
         std::ostringstream rawFrame;
 
         // Append the command
@@ -100,7 +94,7 @@ public:
         return rawFrame.str();
     }
 
-    static StompFrame parseEvent(Event& event)
+    StompFrame StompFrame::parseEvent(Event& event)
     {   
         std::map<std::string, std::string> general_information = event.get_general_information();  
         std::string active = general_information["active"];
@@ -117,7 +111,8 @@ public:
                 {"    forces_arrival_at_scene", forces_arrival},
                 {"description", event.get_description()}
             },"");
+        return frame;
     }
 
     
-};
+

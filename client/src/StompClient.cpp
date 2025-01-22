@@ -3,16 +3,10 @@
 #include <mutex>
 #include "../include/ConnectionHandler.h"
 #include "../include/StompProtocol.h"
+#include "../include/StompClient.h"
 
-class StompClient {
-private:
-    ConnectionHandler connectionHandler;
-    StompProtocol protocol;
-    bool isConnected;
-    bool terminate;
-    std::mutex mutex;
-
-    void handleUserInput() {
+    void StompClient::handleUserInput() {
+        //lock terminate??
         while (!terminate && protocol.shouldTerminate()) {
             std::string command;
             std::getline(std::cin, command);
@@ -32,11 +26,11 @@ private:
         }
     }
 
-    void handleServerResponses() {
+    void StompClient::handleServerResponses() {
         while (!terminate && protocol.shouldTerminate()) {
             std::string response;
 
-            
+            connectionHandler.getLine(response);
             // if (!connectionHandler.getLine(response)) {
             //     std::cerr << "Connection lost with the server." << std::endl;
             //     terminate = true;
@@ -51,16 +45,17 @@ private:
                 std::cout << "Successfully connected to the server!" << std::endl;
             } else if (response.find("ERROR") != std::string::npos) {
                 std::cerr << "Error received: " << response << std::endl;
+                std::lock_guard<std::mutex> lock(mutex);
                 terminate = true;
             }
         }
     }
 
-StompClient()
+StompClient::StompClient()
         : connectionHandler("stomp.cs.bgu.ac.il", 7777), 
           protocol(connectionHandler), isConnected(false), terminate(false),mutex() {}
 
- void run() {
+ void StompClient::run() {
         // Attempt initial connection to the server
         if (!connectionHandler.connect()) {
             std::cerr << "Failed to connect to the server at stomp.cs.bgu.ac.il:7777" << std::endl;
@@ -78,13 +73,15 @@ StompClient()
         connectionHandler.close();
         std::cout << "Disconnected from the server." << std::endl;
     }
-       int main() {
+
+
+    int main(int argc, char *argv[]) {
         StompClient client;
         client.run();
         return 0;
     }
 
-};
+
 
 // void readInput(ConnectionHandler &connectionHandler) {
 //     // std::string line;

@@ -1,4 +1,3 @@
-// #pragma once
 #ifndef STOMP_PROTOCOL_H
 #define STOMP_PROTOCOL_H
 
@@ -19,7 +18,7 @@
 // TODO: implement the STOMP protocol
 class StompProtocol
 {
-private: bool terminate;
+bool terminate;
 bool isConnected;
 ConnectionHandler& connectionHandler;
 int reportsCount;

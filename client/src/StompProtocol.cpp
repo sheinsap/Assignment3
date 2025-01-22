@@ -12,30 +12,35 @@
 #include <sstream>
 #include <ctime>
 
-class StompProtocol {
-private:
-bool terminate;
-bool isConnected;
-ConnectionHandler& connectionHandler;
-int reportsCount;
-int activeCount;
-int forcesArrivalCount;
-std::string loggedUser;    
-std::map<std::string, std::string> channelSubscriptions; //key:id value:channel
-std::map<std::string, std::string> waitingReceipt; //key: receipts value:command
-std::map<std::string, std::map<std::string, std::vector<Event>>> userEvents; //key: user value: Hash map(key:channel name, value: Events sorted by date)
-std::mutex mutex;
+
+// bool terminate;
+// bool isConnected;
+// ConnectionHandler& connectionHandler;
+// int reportsCount;
+// int activeCount;
+// int forcesArrivalCount;
+// std::string loggedUser;    
+// std::map<std::string, std::string> channelSubscriptions; //key:id value:channel
+// std::map<std::string, std::string> waitingReceipt; //key: receipts value:command
+// std::map<std::string, std::map<std::string, std::vector<Event>>> userEvents; //key: user value: Hash map(key:channel name, value: Events sorted by date)
+// std::mutex mutex;
 
 
-
-
-public:
      // Constructor
-    StompProtocol(ConnectionHandler& handler) : connectionHandler(handler),isConnected(false), terminate(false),loggedUser(""),
-    reportsCount(0),activeCount(0),forcesArrivalCount(0),mutex()  {}
+    StompProtocol::StompProtocol(ConnectionHandler& handler) :  terminate(false),
+      isConnected(false),
+      connectionHandler(handler),
+      reportsCount(0),
+      activeCount(0),
+      forcesArrivalCount(0),
+      loggedUser(""),
+      channelSubscriptions(),
+      waitingReceipt(),
+      userEvents(),
+      mutex() {}
 
-    void processFromServer(const std::string& input) {
-        StompFrame frame = frame.parseFromServer(input);
+    void StompProtocol::processFromServer(const std::string& input) {
+        StompFrame frame = StompFrame::parseFromServer(input);
         std::string act;
         // act = frame.toRawFrame();
         // std::cout << act << std::endl;
@@ -65,7 +70,7 @@ public:
 
      
     //parsing from user
-    void processFromUser(const std::string& input) {
+    void StompProtocol::processFromUser(const std::string& input) {
         //Command word
         std::istringstream stream(input);
         std::string command;
@@ -196,18 +201,18 @@ public:
                     "");
                 sendDisconnect(frame);
             }
-        }
+        
          else {
             std::cout << "Unknown command or unlogged user"<< std::endl;
         }
-        
+    }
     
 
-    bool shouldTerminate() const {
+    bool StompProtocol::shouldTerminate() const {
         return terminate;
     }
 
-    void sendConnect(const StompFrame& frame){
+    void StompProtocol::sendConnect(const StompFrame& frame){
         loggedUser=frame.getHeader("user");
         //(!!!)Should I wait in some way to confirmation??
         std::string rawFrame = frame.toRawFrame();
@@ -215,7 +220,7 @@ public:
         connectionHandler.sendLine(rawFrame);
     }
 
-    void sendEvent(Event& event){
+    void StompProtocol::sendEvent(Event& event){
         //(!!!) ?? frame.getHeader("receipt");
         StompFrame frame = StompFrame::parseEvent(event);
         std::string rawFrame = frame.toRawFrame();
@@ -223,25 +228,25 @@ public:
         connectionHandler.sendLine(rawFrame);
     }
 
-    void sendSubscribe(const StompFrame& frame){
+    void StompProtocol::sendSubscribe(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
         channelSubscriptions[frame.getHeader("id")] = frame.getHeader("destination:/");
         //(!!!)what about the case of many receipts per id's 
-        waitingReceipt.insert(frame.getHeader("receipt"),frame.getCommand());
+        waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         std::string rawFrame = frame.toRawFrame();
         connectionHandler.sendLine(rawFrame);
     }
 
-    void sendUnsubscribe(const StompFrame& frame){
+    void StompProtocol::sendUnsubscribe(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
-        waitingReceipt.insert(frame.getHeader("receipt"),frame.getCommand());
+        waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         channelSubscriptions.erase(frame.getHeader("id"));
         std::string rawFrame = frame.toRawFrame();
         connectionHandler.sendLine(rawFrame);
 
     }
 
-    void sendSummary(const std::string& channel_name, const std::string& user, const std::string& file) {
+    void StompProtocol::sendSummary(const std::string& channel_name, const std::string& user, const std::string& file) {
         // Check if the user exists in userEvents
         auto userIt = userEvents.find(user);
         if (userIt == userEvents.end()) {
@@ -317,16 +322,16 @@ public:
     }
 
     // Helper function to convert epoch time to a date-time string
-    std::string epochToDate(time_t epoch) {
+    std::string StompProtocol::epochToDate(time_t epoch) {
         std::tm* tm = std::localtime(&epoch);
         std::ostringstream dateStream;
         dateStream << std::put_time(tm, "%d/%m/%y %H:%M");
         return dateStream.str();
     }
 
-    void sendDisconnect(const StompFrame& frame){
+    void StompProtocol::sendDisconnect(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
-        waitingReceipt.insert(frame.getHeader("receipt"),frame.getCommand());
+        waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         isConnected=false;
         //(!!!)does it wait to receipt?
         loggedUser="";
@@ -337,7 +342,7 @@ public:
 
 
 
-    std::vector<Event> sortEvents(std::vector<Event> events)
+    std::vector<Event> StompProtocol::sortEvents(std::vector<Event> events)
     {
         // Sort events first by date and then by name
         std::sort(events.begin(), events.end(), [](const Event& a, const Event& b) {
@@ -351,4 +356,3 @@ public:
 
         return events;
     }
-};

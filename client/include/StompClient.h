@@ -14,6 +14,8 @@ class StompClient{
 
     void handleUserInput();
     void handleServerResponses();
+    
+    public:
     StompClient();
     void run();
 

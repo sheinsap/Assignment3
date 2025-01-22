@@ -7,7 +7,8 @@
 #include <vector>
 #include <sstream>
 #include <cstring>
-#include "../include/keyboardInput.h"
+#include "event.h"
+// #include "../include/keyboardInput.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -56,10 +57,21 @@ const std::map<std::string, std::string> &Event::get_general_information() const
     return this->general_information;
 }
 
+void Event::split_str(const std::string &line, char delimiter, std::vector<std::string> &lineArgs)
+{
+    size_t start = 0, end;
+
+    while ((end = line.find(delimiter, start)) != std::string::npos) {
+        lineArgs.push_back(line.substr(start, end - start)); // Add each token
+        start = end + 1;
+    }
+    lineArgs.push_back(line.substr(start)); // Add the last token
+}
 const std::string &Event::get_description() const
 {
     return this->description;
 }
+
 
 Event::Event(const std::string &frame_body): channel_name(""), city(""), 
                                              name(""), date_time(0), description(""), general_information(),
@@ -143,3 +155,4 @@ names_and_events parseEventsFile(std::string json_path)
 
     return events_and_names;
 }
+
