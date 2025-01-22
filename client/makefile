@@ -1,27 +1,31 @@
 CFLAGS:=-c -Wall -Weffc++ -g -std=c++11 -Iinclude
 LDFLAGS:=-lboost_system -lpthread
-# TODO change the makefile for StompEMIlient
-all: EchoClient
 
-EchoClient: bin/ConnectionHandler.o bin/echoClient.o
-	g++ -o bin/EchoClient bin/ConnectionHandler.o bin/echoClient.o $(LDFLAGS)
+all: StompWCIClient
 
-StompWCIClient: bin/ConnectionHandler.o bin/StompClient.obin/event.o
-	g++ -o bin/StompWCIClient bin/ConnectionHandler.o bin/StompClient.o $(LDFLAGS)
+# Build StompWCIClient executable
+StompWCIClient: bin/ConnectionHandler.o bin/StompClient.o bin/event.o bin/StompFrame.o bin/StompProtocol.o bin/SingletonCounter.o
+	g++ -o bin/StompWCIClient bin/ConnectionHandler.o bin/StompClient.o bin/event.o bin/StompFrame.o bin/StompProtocol.o bin/SingletonCounter.o $(LDFLAGS)
 
-bin/ConnectionHandler.o: src/ConnectionHandler.cpp
+# Object files for each source file
+bin/ConnectionHandler.o: src/ConnectionHandler.cpp include/ConnectionHandler.h
 	g++ $(CFLAGS) -o bin/ConnectionHandler.o src/ConnectionHandler.cpp
 
-bin/echoClient.o: src/echoClient.cpp
-	g++ $(CFLAGS) -o bin/echoClient.o src/echoClient.cpp
-
-bin/event.o: src/event.cpp
+bin/event.o: src/event.cpp include/event.h
 	g++ $(CFLAGS) -o bin/event.o src/event.cpp
 
-bin/StompClient.o: src/StompClient.cpp
+bin/StompClient.o: src/StompClient.cpp include/StompClient.h include/StompProtocol.h
 	g++ $(CFLAGS) -o bin/StompClient.o src/StompClient.cpp
+
+bin/StompFrame.o: src/StompFrame.cpp include/StompFrame.h
+	g++ $(CFLAGS) -o bin/StompFrame.o src/StompFrame.cpp
+
+bin/StompProtocol.o: src/StompProtocol.cpp include/StompProtocol.h include/StompFrame.h
+	g++ $(CFLAGS) -o bin/StompProtocol.o src/StompProtocol.cpp
+
+bin/SingletonCounter.o: src/SingletonCounter.cpp include/SingletonCounter.h
+	g++ $(CFLAGS) -o bin/SingletonCounter.o src/SingletonCounter.cpp
 
 .PHONY: clean
 clean:
 	rm -f bin/*
-	
