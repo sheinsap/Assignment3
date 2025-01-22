@@ -36,7 +36,7 @@ public:
     // std::string process(const std::string& msg);
     void processFromServer(const std::string& input);
     void processFromUser(const std::string& input);
-    bool shouldTerminate() const;
+    bool isTerminate() const;
 
     void sendConnect(const StompFrame& frame);
     void sendEvent(Event& event);

@@ -27,18 +27,20 @@
 
     StompFrame StompFrame::parseFromServer(const std::string& frame) {
         // Check if the frame ends with the null character
-        if (frame.empty() || frame.back() != '\0') {
-            return StompFrame("ERROR", {{"message", "Frame does not terminate with null character"}}, "");
-        }
+        // if (frame.empty() || frame.back() != '\0') {
+        //     return StompFrame("ERROR", {{"message", "Frame does not terminate with null character"}}, "");
+        // }
 
         // Remove the null character from the end
-        std::string trimmedFrame = frame.substr(0, frame.size() - 1);
+        // std::string trimmedFrame = frame.substr(0, frame.size() - 1);
 
-        std::istringstream stream(trimmedFrame);
+        std::istringstream stream(frame);
         std::string line;
 
         // Extract the command (first line)
-        std::getline(stream, line);
+        std::getline(stream,line,'\n');
+
+        // Append the command
         std::string command = line;
 
         // Parse the headers
@@ -89,7 +91,7 @@
         }
 
         // Append the null character to terminate the frame
-        rawFrame << '\0';
+        rawFrame.put('\0');
 
         return rawFrame.str();
     }

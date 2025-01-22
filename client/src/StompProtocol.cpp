@@ -13,19 +13,6 @@
 #include <ctime>
 
 
-// bool terminate;
-// bool isConnected;
-// ConnectionHandler& connectionHandler;
-// int reportsCount;
-// int activeCount;
-// int forcesArrivalCount;
-// std::string loggedUser;    
-// std::map<std::string, std::string> channelSubscriptions; //key:id value:channel
-// std::map<std::string, std::string> waitingReceipt; //key: receipts value:command
-// std::map<std::string, std::map<std::string, std::vector<Event>>> userEvents; //key: user value: Hash map(key:channel name, value: Events sorted by date)
-// std::mutex mutex;
-
-
      // Constructor
     StompProtocol::StompProtocol(ConnectionHandler& handler) :  terminate(false),
       isConnected(false),
@@ -57,11 +44,17 @@
         } else if (frame.getCommand() == "ERROR") {
             act = frame.toRawFrame();
             std::cout << act << std::endl;
-        } else if (frame.getCommand() == "RECEIPT") {
+        } else if (frame.getCommand() == "DISCONNECT") {
+            act = frame.toRawFrame();
+            std::cout << act << std::endl;    
+        } else if(frame.getCommand() == "RECEIPT") {
             std::lock_guard<std::mutex> lock(mutex);
             act = frame.toRawFrame();
             if(waitingReceipt[frame.getHeader("receipt")]=="DISCONNECT"){
                 connectionHandler.close();
+                terminate = true;
+                isConnected = false;
+                
             }
             waitingReceipt.erase(frame.getHeader("receipt"));
             std::cout << act << std::endl;
@@ -83,12 +76,12 @@
             StompFrame frame = StompFrame(
                 "CONNECT",
                 {
-                    {"accept-version:", "1.2"},
+                    {"accept-version", "1.2"},
                     {"host", "stomp.cs.bgu.ac.il"},
                     {"login", username},
                     {"passcode", password}
                 },
-                "");
+                "\n\0");
             sendConnect(frame);
         }
 
@@ -96,22 +89,22 @@
         // std::lock_guard<std::mutex> lock(mutex);
         // if(isConnected){
             //join {channel_name} - SUBSCRIBE 
-            if (command == "join") {
+            else if (command == "join") {
                 std::string channel_name;
                 stream >> channel_name ;
                 StompFrame frame = StompFrame(
                     "SUBSCRIBE",
                     {
-                        {"destination:/", channel_name},
+                        {"destination", channel_name},
                         {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
-                    "");
+                    "\n\0");
                 sendSubscribe(frame);
             }
 
             //exit {channel_name}- UNSUBSCRIBE
-            if (command == "exit") {
+            else if (command == "exit") {
                 std::string channel_name;
                 stream >> channel_name ;
                 StompFrame frame = StompFrame(
@@ -121,12 +114,12 @@
                         {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
-                    "");
+                    "\n\0");
                 sendUnsubscribe(frame);
             }
 
             //report {eventsPath} - SEND multiple times
-            if (command == "report") {
+            else if (command == "report") {
 
                 //parse events 
                 std::string eventsPath;
@@ -182,33 +175,33 @@
 
             
             //summary {channel_name} {user} {file} 
-            if (command == "summary") {
+            else if (command == "summary") {
                 std::string channel_name, user, file;
                 stream >> channel_name >> user >> file ;
-
+                sendSummary(channel_name,user,file);
             }
 
             //(!!!) Once the client receives the RECEIPT frame, it should close the socket
             //(!!!) and await further user commands.
 
             //logut - DISCONNECT
-            if (command == "logout") {
+            else if (command == "logout") {
                 StompFrame frame = StompFrame(
                     "DISCONNECT",
                     {
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
-                    "");
+                    "\n\0");
                 sendDisconnect(frame);
             }
         
          else {
-            std::cout << "Unknown command or unlogged user"<< std::endl;
+            std::cout << "Unknown command"<< std::endl;
         }
     }
     
 
-    bool StompProtocol::shouldTerminate() const {
+    bool StompProtocol::isTerminate() const {
         return terminate;
     }
 
@@ -332,10 +325,10 @@
     void StompProtocol::sendDisconnect(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
         waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
-        isConnected=false;
         //(!!!)does it wait to receipt?
         loggedUser="";
         std::string rawFrame = frame.toRawFrame();
+        std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
         connectionHandler.sendLine(rawFrame);
         //delete event in field? 
     }

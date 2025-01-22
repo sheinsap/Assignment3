@@ -7,7 +7,7 @@
 
     void StompClient::handleUserInput() {
         //lock terminate??
-        while (!terminate && protocol.shouldTerminate()) {
+        while (!terminate && !protocol.isTerminate() ) {
             std::string command;
             std::getline(std::cin, command);
 
@@ -27,7 +27,7 @@
     }
 
     void StompClient::handleServerResponses() {
-        while (!terminate && protocol.shouldTerminate()) {
+        while (!terminate && !protocol.isTerminate()) {
             std::string response;
 
             connectionHandler.getLine(response);
@@ -46,13 +46,14 @@
             } else if (response.find("ERROR") != std::string::npos) {
                 std::cerr << "Error received: " << response << std::endl;
                 std::lock_guard<std::mutex> lock(mutex);
-                terminate = true;
+                // terminate = true;
             }
         }
     }
 
 StompClient::StompClient()
-        : connectionHandler("stomp.cs.bgu.ac.il", 7777), 
+        // : connectionHandler("stomp.cs.bgu.ac.il", 7777),
+        : connectionHandler("127.0.0.1", 7777), 
           protocol(connectionHandler), isConnected(false), terminate(false),mutex() {}
 
  void StompClient::run() {
@@ -61,7 +62,7 @@ StompClient::StompClient()
             std::cerr << "Failed to connect to the server at stomp.cs.bgu.ac.il:7777" << std::endl;
             return;
         }
-
+        
         // Start threads for input and server response handling
         std::thread userInputThread(&StompClient::handleUserInput, this);
         std::thread serverResponseThread(&StompClient::handleServerResponses, this);
