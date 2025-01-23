@@ -19,6 +19,7 @@ public:
     // Getters
     std::string getCommand() const;
     std::string getHeader(const std::string& key) const;
+    std::map<std::string, std::string> getHeaders() const;
     std::string getBody() const;
 
     // Static method to parse a raw frame string into a StompFrame object

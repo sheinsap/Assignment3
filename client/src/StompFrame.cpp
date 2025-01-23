@@ -6,6 +6,7 @@
 #include "../include/event.h"
 #include "../include/SingletonCounter.h"
 #include "../include/StompFrame.h"
+#include "StompFrame.h"
 
     // Constructor
     StompFrame::StompFrame(const std::string& command, const std::map<std::string, std::string>& headers, const std::string& body)
@@ -19,6 +20,11 @@
     std::string StompFrame::getHeader(const std::string& key) const {
         auto it = headers.find(key);
         return it != headers.end() ? it->second : "";
+    }
+
+    std::map<std::string, std::string> StompFrame::getHeaders() const
+    {
+        return headers;
     }
 
     std::string StompFrame::getBody() const {

@@ -27,10 +27,19 @@
       mutex() {}
 
     void StompProtocol::processFromServer(const std::string& input) {
+        std::cout << "processFromServer: input from server is" << input << std::endl;
         StompFrame frame = StompFrame::parseFromServer(input);
         std::string act;
         // act = frame.toRawFrame();
         // std::cout << act << std::endl;
+
+         // Debugging: Print parsed frame
+        std::cout << "Command: " << frame.getCommand() << "\n";
+        std::cout << "Headers:\n";
+        for (const auto& header : frame.getHeaders()) {
+            std::cout << "  " << header.first << ": " << header.second << "\n";
+        }
+        std::cout << "Body:\n" << frame.getBody() << "\n";
         //STOMP frames from server
         if (frame.getCommand() == "CONNECTED") {
             std::lock_guard<std::mutex> lock(mutex);
@@ -184,6 +193,21 @@
             //(!!!) Once the client receives the RECEIPT frame, it should close the socket
             //(!!!) and await further user commands.
 
+
+        //          if (command == "login") {
+        //     std::string hostPort, username, password;
+        //     stream >> hostPort >> username >> password;
+        //     StompFrame frame = StompFrame(
+        //         "CONNECT",
+        //         {
+        //             {"accept-version", "1.2"},
+        //             {"host", "stomp.cs.bgu.ac.il"},
+        //             {"login", username},
+        //             {"passcode", password}
+        //         },
+        //         "\n\0");
+        //     sendConnect(frame);
+        // }
             //logut - DISCONNECT
             else if (command == "logout") {
                 StompFrame frame = StompFrame(
@@ -191,7 +215,7 @@
                     {
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
-                    "\n\0");
+                    "");
                 sendDisconnect(frame);
             }
         
@@ -329,7 +353,7 @@
         loggedUser="";
         std::string rawFrame = frame.toRawFrame();
         std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
-        connectionHandler.sendLine(rawFrame);
+        connectionHandler.sendFrameAscii(rawFrame,'\0');
         //delete event in field? 
     }
 

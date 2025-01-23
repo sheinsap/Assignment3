@@ -30,7 +30,7 @@
         while (!terminate && !protocol.isTerminate()) {
             std::string response;
 
-            connectionHandler.getLine(response);
+            connectionHandler.getFrameAscii(response,'\0');
             // if (!connectionHandler.getLine(response)) {
             //     std::cerr << "Connection lost with the server." << std::endl;
             //     terminate = true;
