@@ -50,6 +50,11 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
             ex.printStackTrace();
         } finally {
             connections.disconnect(connectionId);
+            try {
+                close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }

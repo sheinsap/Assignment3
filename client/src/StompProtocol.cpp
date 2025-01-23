@@ -59,13 +59,14 @@
         } else if(frame.getCommand() == "RECEIPT") {
             std::lock_guard<std::mutex> lock(mutex);
             act = frame.toRawFrame();
-            if(waitingReceipt[frame.getHeader("receipt")]=="DISCONNECT"){
+            std::string receiptId = frame.getHeader("receipt-id"); 
+            if(waitingReceipt[receiptId]=="DISCONNECT"){
                 connectionHandler.close();
                 terminate = true;
                 isConnected = false;
                 
             }
-            waitingReceipt.erase(frame.getHeader("receipt"));
+            waitingReceipt.erase(receiptId);
             std::cout << act << std::endl;
         }
     }
@@ -347,14 +348,22 @@
     }
 
     void StompProtocol::sendDisconnect(const StompFrame& frame){
+        
+        std::string rawFrame = frame.toRawFrame();
+        std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
+        // Update state only after successful send
+        {
         std::lock_guard<std::mutex> lock(mutex);
+        bool result = connectionHandler.sendLine(rawFrame);
+        if (!result) {
+            std::cerr << "Failed to send DISCONNECT frame!" << std::endl;
+            return; // Exit without modifying state
+        }
         waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         //(!!!)does it wait to receipt?
         loggedUser="";
-        std::string rawFrame = frame.toRawFrame();
-        std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
-        connectionHandler.sendFrameAscii(rawFrame,'\0');
         //delete event in field? 
+        }
     }
 
 

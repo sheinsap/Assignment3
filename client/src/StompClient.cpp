@@ -30,14 +30,11 @@
         while (!terminate && !protocol.isTerminate()) {
             std::string response;
 
-            connectionHandler.getFrameAscii(response,'\0');
-            // if (!connectionHandler.getLine(response)) {
-            //     std::cerr << "Connection lost with the server." << std::endl;
-            //     terminate = true;
-            //     break;
-            // }
+            if (connectionHandler.getFrameAscii(response,'\0')){
+                std::cout << "Received frame: " << response << std::endl;
+            
 
-            protocol.processFromServer(response);
+                protocol.processFromServer(response);
 
             if (response.find("CONNECTED") != std::string::npos) {
                 std::lock_guard<std::mutex> lock(mutex);
@@ -47,6 +44,11 @@
                 std::cerr << "Error received: " << response << std::endl;
                 std::lock_guard<std::mutex> lock(mutex);
                 // terminate = true;
+            }
+        } else if (!connectionHandler.getLine(response)) {
+                std::cerr << "Connection lost with the server." << std::endl;
+                terminate = true;
+                break;
             }
         }
     }
