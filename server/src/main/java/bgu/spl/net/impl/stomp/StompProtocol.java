@@ -142,14 +142,18 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
     private void handleSend(StompFrame frame) {
         
         String destination = frame.getHeader("destination");
+
         if (destination == null) {
             sendError("SEND frame must include a destination header", frame, "");
             return;
         }
-        destination = destination.substring(1); // Remove the leading / from the destination
+        //destination = destination.substring(1); // Remove the leading / from the destination
 
         String body = frame.getBody();
         int messageId = messageIdCounter.getAndIncrement(); // Generate a unique message ID
+
+        // Extract the first line from the body (the user)
+        String user = body.split("\n", 2)[0];
 
         // Broadcast the message to all subscribers
         for (int subscriberId : connections.getSubscribers(destination)) {
@@ -160,7 +164,7 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
             
             }
             StompFrame messageFrame = StompFrame.parse("MESSAGE\nsubscription:" + subscriptionId + "\nmessage-id:" + messageId +
-            "\ndestination:/" + destination + "\n\n" + body + "\0");
+            "\ndestination:" + destination + "\n" + user + "\n\n" + body + "\0");
     
             connections.send(subscriberId, messageFrame); 
         }

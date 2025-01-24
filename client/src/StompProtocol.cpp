@@ -90,7 +90,7 @@
                 StompFrame frame = StompFrame(
                     "SUBSCRIBE",
                     {
-                        {"destination","/" + channel_name},
+                        {"destination", channel_name},
                         {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
@@ -108,7 +108,7 @@
                 for (const auto& subscription : channelSubscriptions) {
                     const std::string& id = subscription.first;         // key
                     const std::string& destination = subscription.second; // value
-                    if (destination == "/" + channel_name) {
+                    if (destination == channel_name) {
                         subscriptionId = id;
                         break;
                     }
@@ -123,7 +123,7 @@
                 StompFrame frame = StompFrame(
                     "UNSUBSCRIBE",
                     {
-                        {"destination", "/" +channel_name},
+                        {"destination", channel_name},
                         {"id", subscriptionId},
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },

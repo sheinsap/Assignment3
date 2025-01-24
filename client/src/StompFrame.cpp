@@ -110,7 +110,7 @@
         StompFrame frame = StompFrame(
             "SEND",
             {
-                {"destination", "/" + event.get_channel_name()}
+                {"destination", event.get_channel_name()}
             },
             "user: "+ event.getEventOwnerUser() +"\n"+
             "city: " + event.get_city() +"\n"+
