@@ -28,8 +28,6 @@
 
     void StompClient::handleServerResponses() {
         while (!terminate && !protocol.isTerminate()) {
-            std::cout << "Checking termination condition: terminate=" << terminate
-              << ", protocol.isTerminate()=" << protocol.isTerminate() << std::endl;
             std::string response;
 
             if (connectionHandler.getFrameAscii(response,'\0')){
@@ -67,10 +65,6 @@ StompClient::StompClient()
         
         // Start thread for server response handling
         std::thread serverResponseThread(&StompClient::handleServerResponses, this);
-        // Wait for the connection to be established
-        while (!isConnected) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
     
         // Main thread handles user input
         handleUserInput();
