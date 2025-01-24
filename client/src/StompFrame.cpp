@@ -110,15 +110,15 @@
         StompFrame frame = StompFrame(
             "SEND",
             {
-                {"destination", "/" + event.get_channel_name()},
-                {"user", event.getEventOwnerUser()},
-                {"city", event.get_city()},
-                {"event name", event.get_name()},
-                {"general information", ""},
-                {"    active",active },
-                {"    forces_arrival_at_scene", forces_arrival},
-                {"description", event.get_description()}
-            },"");
+                {"destination", "/" + event.get_channel_name()}
+            },
+            "user: "+ event.getEventOwnerUser() +"\n"+
+            "city: " + event.get_city() +"\n"+
+            "event name: "+ event.get_name() +"\n"+
+            "general information:" +"\n"+
+            "    active: "+ active +"\n"+
+            "    forces_arrival_at_scene: " + forces_arrival+"\n"+
+            "description: " + event.get_description() );
         return frame;
     }
 

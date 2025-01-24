@@ -240,7 +240,8 @@
     }
 
     void StompProtocol::sendConnect(const StompFrame& frame){
-        loggedUser=frame.getHeader("user");
+        loggedUser = frame.getHeader("login");
+
         //(!!!)Should I wait in some way to confirmation??
         sendFrame(frame);
     }
