@@ -46,6 +46,7 @@ public:
     std::string epochToDate(time_t epoch);
     void sendDisconnect(const StompFrame& frame);
     void sendFrame(StompFrame frame);
+    void handleMessageFrame(StompFrame frame);
     std::vector<Event> sortEvents(std::vector<Event> events);
 };
 #endif

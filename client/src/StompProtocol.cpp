@@ -29,24 +29,18 @@
     void StompProtocol::processFromServer(const std::string& input) {
         // std::cout << "processFromServer: input from server is" << input << std::endl;
         StompFrame frame = StompFrame::parseFromServer(input);
-        std::string act;
+        std::string act = frame.toRawFrame();
         std::cout << "Received frame from server:" << std::endl;
+        std::cout << act << std::endl;
+
         //STOMP frames from server
         if (frame.getCommand() == "CONNECTED") {
             std::lock_guard<std::mutex> lock(mutex);
             isConnected=true;
-            act = frame.toRawFrame();
             //(!!!!)??need to add logged user final 
-            std::cout << act << std::endl;
         } else if (frame.getCommand() == "MESSAGE") {
-            act = frame.toRawFrame();
-            std::cout << act << std::endl;
+            handleMessageFrame(frame);
         } else if (frame.getCommand() == "ERROR") {
-            act = frame.toRawFrame();
-            std::cout << act << std::endl;
-        } else if (frame.getCommand() == "DISCONNECT") {
-            act = frame.toRawFrame();
-            std::cout << act << std::endl;    
         } else if(frame.getCommand() == "RECEIPT") {
             std::lock_guard<std::mutex> lock(mutex);
             act = frame.toRawFrame();
@@ -146,48 +140,12 @@
                 names_and_events eventsData=parseEventsFile(eventsPath);
                 
                 //Channel name + events vector 
-                const std::string& channel_name = eventsData.channel_name;
+                // const std::string& channel_name = eventsData.channel_name;
                 std::vector<Event>& events = eventsData.events;
-
-                //Add user to events and update counters
-                for (Event& event : events) {
-                    event.setEventOwnerUser(loggedUser);
-                    reportsCount++;
-                    std::map<std::string, std::string> general_information = event.get_general_information();  
-                    std::string active = general_information["active"];
-                    std::string forces_arrival = general_information["forces_arrival_at_scene"];
-                    if(active=="true"){
-                        activeCount++;
-                    }
-                    if(forces_arrival=="true"){
-                        forcesArrivalCount++;
-                    }
-                }
-
-                    // Add events to userEvents per user, per channel
-                for (Event& event : events) {
-                    // Add the user if not already present
-                    if (userEvents.find(loggedUser) == userEvents.end()) {
-                        userEvents[loggedUser] = std::map<std::string, std::vector<Event>>();
-                    }
-
-                    // Add the channel if not already present
-                    if (userEvents[loggedUser].find(channel_name) == userEvents[loggedUser].end()) {
-                        userEvents[loggedUser][channel_name] = std::vector<Event>();
-                    }
-
-                    // Add the event to the appropriate user's channel
-                    userEvents[loggedUser][channel_name].push_back(event);
-                }
-
-                // Ensure all events are sorted by date per user, per channel
-                for (auto& userPair : userEvents) {
-                    for (auto& channelPair : userPair.second) {
-                        channelPair.second = sortEvents(channelPair.second);
-                    }
-                }
+                 
                 //send all the events
                 for (Event& event : events){
+                    event.setEventOwnerUser(loggedUser);
                     sendEvent(event);
                 }
             }
@@ -380,6 +338,98 @@
         }
     }
 
+    void StompProtocol::handleMessageFrame(StompFrame frame){
+
+        std::string destination = frame.getHeader("destination"); // Channel name
+        std::string body = frame.getBody();                       // Event details
+
+        // Remove the leading '/' from the destination
+        if (!destination.empty() && destination[0] == '/') {
+            destination = destination.substr(1);
+        }
+
+        // Parse the body to extract event details
+        std::istringstream bodyStream(body);
+        std::string user, city, eventName, description;
+        int dateTime = 0; // Default value for the date-time
+        std::map<std::string, std::string> generalInformation;
+
+        std::string line;
+        while (std::getline(bodyStream, line)) {
+            // Parse individual fields in the body
+            if (line.find("user: ") == 0) {
+                user = line.substr(6);
+            } else if (line.find("city: ") == 0) {
+                city = line.substr(6);
+            } else if (line.find("event name: ") == 0) {
+                eventName = line.substr(12);
+            } else if (line.find("date time: ") == 0) {
+                dateTime = std::stoi(line.substr(11));
+            } else if (line.find("active: ") == 0) {
+                generalInformation["active"] = line.substr(8);
+            } else if (line.find("forces_arrival_at_scene: ") == 0) {
+                generalInformation["forces_arrival_at_scene"] = line.substr(24);
+            } else if (line.find("description: ") == 0) {
+                description = line.substr(12);
+            }
+        }
+
+        // Create an Event object
+        Event event(destination, city, eventName , dateTime, description, generalInformation);
+
+        // Add the event to userEvents
+        std::lock_guard<std::mutex> lock(mutex); // Ensure thread safety
+        if (userEvents.find(user) == userEvents.end()) {
+            userEvents[user] = std::map<std::string, std::vector<Event>>();
+        }
+        if (userEvents[user].find(destination) == userEvents[user].end()) {
+            userEvents[user][destination] = std::vector<Event>();
+        }
+        userEvents[user][destination].push_back(event);
+        // Sort events by date, then by name
+        userEvents[user][destination] = sortEvents(userEvents[user][destination]);
+        
+        // std::sort(userEvents[user][destination].begin(), userEvents[user][destination].end(), [](const Event& a, const Event& b) {
+        //     return a.get_date_time() < b.get_date_time();
+        // });
+        
+        std::cout << "Event added for user '" << user << "' in channel '" << destination << "'." << std::endl;
+
+                //     reportsCount++;
+                //     std::map<std::string, std::string> general_information = event.get_general_information();  
+                //     std::string active = general_information["active"];
+                //     std::string forces_arrival = general_information["forces_arrival_at_scene"];
+                //     if(active=="true"){
+                //         activeCount++;
+                //     }
+                //     if(forces_arrival=="true"){
+                //         forcesArrivalCount++;
+                //     }
+                // }
+
+                //     // Add events to userEvents per user, per channel
+                // for (Event& event : events) {
+                //     // Add the user if not already present
+                //     if (userEvents.find(loggedUser) == userEvents.end()) {
+                //         userEvents[loggedUser] = std::map<std::string, std::vector<Event>>();
+                //     }
+
+                //     // Add the channel if not already present
+                //     if (userEvents[loggedUser].find(channel_name) == userEvents[loggedUser].end()) {
+                //         userEvents[loggedUser][channel_name] = std::vector<Event>();
+                //     }
+
+                //     // Add the event to the appropriate user's channel
+                //     userEvents[loggedUser][channel_name].push_back(event);
+                // }
+
+                // // Ensure all events are sorted by date per user, per channel
+                // for (auto& userPair : userEvents) {
+                //     for (auto& channelPair : userPair.second) {
+                //         channelPair.second = sortEvents(channelPair.second);
+                //     }
+                // }
+    }
     std::vector<Event> StompProtocol::sortEvents(std::vector<Event> events)
     {
         // Sort events first by date and then by name

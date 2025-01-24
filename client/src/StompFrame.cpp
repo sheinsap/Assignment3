@@ -115,6 +115,7 @@
             "user: "+ event.getEventOwnerUser() +"\n"+
             "city: " + event.get_city() +"\n"+
             "event name: "+ event.get_name() +"\n"+
+            "date time: "+ std::to_string(event.get_date_time()) +"\n"+
             "general information:" +"\n"+
             "    active: "+ active +"\n"+
             "    forces_arrival_at_scene: " + forces_arrival+"\n"+
