@@ -341,16 +341,13 @@
     void StompProtocol::handleMessageFrame(StompFrame frame){
 
         std::string destination = frame.getHeader("destination"); // Channel name
+        std::string user = frame.getHeader("user");
         std::string body = frame.getBody();                       // Event details
 
-        // Remove the leading '/' from the destination
-        if (!destination.empty() && destination[0] == '/') {
-            destination = destination.substr(1);
-        }
 
         // Parse the body to extract event details
         std::istringstream bodyStream(body);
-        std::string user, city, eventName, description;
+        std::string bodyUser, city, eventName, description;
         int dateTime = 0; // Default value for the date-time
         std::map<std::string, std::string> generalInformation;
 
@@ -358,7 +355,7 @@
         while (std::getline(bodyStream, line)) {
             // Parse individual fields in the body
             if (line.find("user: ") == 0) {
-                user = line.substr(6);
+                bodyUser = line.substr(6);
             } else if (line.find("city: ") == 0) {
                 city = line.substr(6);
             } else if (line.find("event name: ") == 0) {
