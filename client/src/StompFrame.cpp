@@ -98,7 +98,7 @@
 
         // Append the null character to terminate the frame
         rawFrame.put('\0');
-        
+
         return rawFrame.str();
     }
 
@@ -110,7 +110,7 @@
         StompFrame frame = StompFrame(
             "SEND",
             {
-                {"destination:", event.get_channel_name()},
+                {"destination", "/" + event.get_channel_name()},
                 {"user", event.getEventOwnerUser()},
                 {"city", event.get_city()},
                 {"event name", event.get_name()},

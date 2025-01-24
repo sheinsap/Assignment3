@@ -108,11 +108,29 @@
             else if (command == "exit") {
                 std::string channel_name;
                 stream >> channel_name ;
+
+                // Find the subscription ID for the channel
+                std::string subscriptionId = "";
+                for (const auto& subscription : channelSubscriptions) {
+                    const std::string& id = subscription.first;         // key
+                    const std::string& destination = subscription.second; // value
+                    if (destination == "/" + channel_name) {
+                        subscriptionId = id;
+                        break;
+                    }
+                }
+
+                if (subscriptionId.empty()) {
+                std::cerr << "Error: No subscription found for channel " << channel_name << std::endl;
+                return;
+                }
+
+
                 StompFrame frame = StompFrame(
                     "UNSUBSCRIBE",
                     {
                         {"destination", "/" +channel_name},
-                        {"id", },
+                        {"id", subscriptionId},
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
                     "\n\0");
@@ -129,7 +147,7 @@
                 
                 //Channel name + events vector 
                 const std::string& channel_name = eventsData.channel_name;
-                std::vector<Event> events = eventsData.events;
+                std::vector<Event>& events = eventsData.events;
 
                 //Add user to events and update counters
                 for (Event& event : events) {
