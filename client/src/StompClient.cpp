@@ -28,6 +28,8 @@
 
     void StompClient::handleServerResponses() {
         while (!terminate && !protocol.isTerminate()) {
+            std::cout << "Checking termination condition: terminate=" << terminate
+              << ", protocol.isTerminate()=" << protocol.isTerminate() << std::endl;
             std::string response;
 
             if (connectionHandler.getFrameAscii(response,'\0')){
@@ -54,7 +56,7 @@
 StompClient::StompClient()
         // : connectionHandler("stomp.cs.bgu.ac.il", 7777),
         : connectionHandler("127.0.0.1", 7777), 
-          protocol(connectionHandler), isConnected(false), terminate(false),mutex() {}
+          protocol(connectionHandler), isConnected(false), terminate(false), mutex() {}
 
  void StompClient::run() {
         // Attempt initial connection to the server
@@ -63,11 +65,16 @@ StompClient::StompClient()
             return;
         }
         
-        // Start threads for input and server response handling
-        std::thread userInputThread(&StompClient::handleUserInput, this);
+        // Start thread for server response handling
         std::thread serverResponseThread(&StompClient::handleServerResponses, this);
+        // Wait for the connection to be established
+        while (!isConnected) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    
+        // Main thread handles user input
+        handleUserInput();
 
-        userInputThread.join();
         serverResponseThread.join();
 
         // Close the connection gracefully
