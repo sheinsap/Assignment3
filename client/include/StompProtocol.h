@@ -45,6 +45,7 @@ public:
     void sendSummary(const std::string& channel_name, const std::string& user, const std::string& file);
     std::string epochToDate(time_t epoch);
     void sendDisconnect(const StompFrame& frame);
+    void sendFrame(StompFrame frame);
     std::vector<Event> sortEvents(std::vector<Event> events);
 };
 #endif

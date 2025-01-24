@@ -31,9 +31,7 @@
             std::string response;
 
             if (connectionHandler.getFrameAscii(response,'\0')){
-                std::cout << "Received frame: " << response << std::endl;
-            
-
+                // std::cout << "Received frame from server: " << response << std::endl;
                 protocol.processFromServer(response);
 
             if (response.find("CONNECTED") != std::string::npos) {
@@ -111,63 +109,3 @@ StompClient::StompClient()
 //         std::cout << "Sent " << len+1 << " bytes to server" << std::endl;
 //     }
 // }
-
-// void readServerMessages(ConnectionHandler &connectionHandler) {
-//     std::string answer;
-// 	int len;
-//     while (true) {
-//         if (!connectionHandler.getLine(answer)) {
-//             std::cerr << "Disconnected from server" << std::endl;
-//             break;
-//         }
-//         std::cout << "Server Response: " << answer << std::endl;
-//         // Additional parsing/handling of STOMP frames can be added here
-
-// 		len=answer.length();
-// 		// A C string must end with a 0 char delimiter.  When we filled the answer buffer from the socket
-// 		// we filled up to the \n char - we must make sure now that a 0 char is also present. So we truncate last character.
-//         answer.resize(len-1);
-//         std::cout << "Reply: " << answer << " " << len << " bytes " << std::endl << std::endl;
-
-// 		// StompProtocol::parseFrame(answer);
-//         if (answer == "bye") {
-//             std::cout << "Exiting...\n" << std::endl;
-//             break;
-//         }
-
-//     }
-
-//  
-// };
-
-
-
-// int main(int argc, char *argv[]) {
-//     if (argc < 3) {
-//         std::cerr << "Usage: " << argv[0] << " host port" << std::endl << std::endl;
-//         return -1;
-//     }
-//     std::string host = argv[1];
-//     short port = atoi(argv[2]);
-    
-//     ConnectionHandler connectionHandler(host, port);
-//     if (!connectionHandler.connect()) {
-//         std::cerr << "Cannot connect to " << host << ":" << port << std::endl;
-//         return 1;
-//     }
-	
-
-//     std::thread inputThread(readInput, std::ref(connectionHandler));
-//     std::thread serverThread(readServerMessages, std::ref(connectionHandler));
-
-//     inputThread.join();
-//     serverThread.join();
-
-//     return 0;
-// }
-
-
-// // int main(int argc, char *argv[]) {
-// // 	// TODO: implement the STOMP client
-// // 	return 0;
-// // }

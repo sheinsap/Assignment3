@@ -27,25 +27,16 @@
       mutex() {}
 
     void StompProtocol::processFromServer(const std::string& input) {
-        std::cout << "processFromServer: input from server is" << input << std::endl;
+        // std::cout << "processFromServer: input from server is" << input << std::endl;
         StompFrame frame = StompFrame::parseFromServer(input);
         std::string act;
-        // act = frame.toRawFrame();
-        // std::cout << act << std::endl;
-
-         // Debugging: Print parsed frame
-        std::cout << "Command: " << frame.getCommand() << "\n";
-        std::cout << "Headers:\n";
-        for (const auto& header : frame.getHeaders()) {
-            std::cout << "  " << header.first << ": " << header.second << "\n";
-        }
-        std::cout << "Body:\n" << frame.getBody() << "\n";
+        std::cout << "Received frame from server:" << std::endl;
         //STOMP frames from server
         if (frame.getCommand() == "CONNECTED") {
             std::lock_guard<std::mutex> lock(mutex);
             isConnected=true;
             act = frame.toRawFrame();
-            //need to add logged user final
+            //(!!!!)??need to add logged user final 
             std::cout << act << std::endl;
         } else if (frame.getCommand() == "MESSAGE") {
             act = frame.toRawFrame();
@@ -105,7 +96,7 @@
                 StompFrame frame = StompFrame(
                     "SUBSCRIBE",
                     {
-                        {"destination", channel_name},
+                        {"destination","/" + channel_name},
                         {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
@@ -120,8 +111,8 @@
                 StompFrame frame = StompFrame(
                     "UNSUBSCRIBE",
                     {
-                        {"destination:/", channel_name},
-                        {"id", std::to_string(SingletonCounter::getInstance().getNextId())},
+                        {"destination", "/" +channel_name},
+                        {"id", },
                         {"receipt", std::to_string(SingletonCounter::getInstance().getNextReceipt())}
                     },
                     "\n\0");
@@ -221,7 +212,7 @@
             }
         
          else {
-            std::cout << "Unknown command"<< std::endl;
+            std::cout << "Unknown command from user"<< std::endl;
         }
     }
     
@@ -233,37 +224,30 @@
     void StompProtocol::sendConnect(const StompFrame& frame){
         loggedUser=frame.getHeader("user");
         //(!!!)Should I wait in some way to confirmation??
-        std::string rawFrame = frame.toRawFrame();
-        std::lock_guard<std::mutex> lock(mutex);
-        connectionHandler.sendLine(rawFrame);
+        sendFrame(frame);
     }
 
     void StompProtocol::sendEvent(Event& event){
         //(!!!) ?? frame.getHeader("receipt");
         StompFrame frame = StompFrame::parseEvent(event);
-        std::string rawFrame = frame.toRawFrame();
-        std::lock_guard<std::mutex> lock(mutex);
-        connectionHandler.sendLine(rawFrame);
+        sendFrame(frame);
     }
 
     void StompProtocol::sendSubscribe(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
-        channelSubscriptions[frame.getHeader("id")] = frame.getHeader("destination:/");
+        channelSubscriptions[frame.getHeader("id")] = frame.getHeader("destination");
         //(!!!)what about the case of many receipts per id's 
         waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
-        std::string rawFrame = frame.toRawFrame();
-        connectionHandler.sendLine(rawFrame);
+        sendFrame(frame);
     }
 
     void StompProtocol::sendUnsubscribe(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
         waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         channelSubscriptions.erase(frame.getHeader("id"));
-        std::string rawFrame = frame.toRawFrame();
-        connectionHandler.sendLine(rawFrame);
-
+        sendFrame(frame);
     }
-
+    
     void StompProtocol::sendSummary(const std::string& channel_name, const std::string& user, const std::string& file) {
         // Check if the user exists in userEvents
         auto userIt = userEvents.find(user);
@@ -349,16 +333,11 @@
 
     void StompProtocol::sendDisconnect(const StompFrame& frame){
         
-        std::string rawFrame = frame.toRawFrame();
-        std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
+        // std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
         // Update state only after successful send
         {
         std::lock_guard<std::mutex> lock(mutex);
-        bool result = connectionHandler.sendLine(rawFrame);
-        if (!result) {
-            std::cerr << "Failed to send DISCONNECT frame!" << std::endl;
-            return; // Exit without modifying state
-        }
+        sendFrame(frame);
         waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         //(!!!)does it wait to receipt?
         loggedUser="";
@@ -366,7 +345,21 @@
         }
     }
 
+    void StompProtocol::sendFrame(StompFrame frame){
+        std::string rawFrame = frame.toRawFrame();
+        bool result = connectionHandler.sendLine(rawFrame);
+        if (!result) {
+            std::cerr << "\nFailed to send " << frame.getCommand() << " frame:\n" << std::endl;
+            std::cerr << rawFrame << std::endl;
 
+            return; // Exit without modifying state
+        }
+        else{
+            std::cerr <<  "\nFrame " << frame.getCommand() << " sent to server:\n"<< rawFrame << std::endl;
+
+
+        }
+    }
 
     std::vector<Event> StompProtocol::sortEvents(std::vector<Event> events)
     {
