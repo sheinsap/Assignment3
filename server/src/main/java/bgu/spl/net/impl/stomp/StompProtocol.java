@@ -2,8 +2,10 @@ package bgu.spl.net.impl.stomp;
 
 import java.net.SocketOption;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bgu.spl.net.api.StompMessagingProtocol;
@@ -154,15 +156,25 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         // Extract the first line from the body (the user)
         String user = body.split("\n", 2)[0];
 
+        // Check if there are any subscribers for the destination
+        CopyOnWriteArraySet<Integer> subscribers = connections.getSubscribers(destination);
+        if (subscribers == null || subscribers.isEmpty()) {
+            sendError("No subscribers found for destination: " + destination, frame, "The destination has no active subscribers.");
+            return;
+        }
+
+        // Verify the sender's subscription
+        String senderSubscriptionId = connections.getSubscriptionId(connectionId, destination);
+        if (senderSubscriptionId == null) {
+            sendError("Sender is not subscribed to destination: " + destination, frame, "You must subscribe to the destination before sending messages.");
+            return;
+        }
+
         // Broadcast the message to all subscribers
-        for (int subscriberId : connections.getSubscribers(destination)) {
+        for (int subscriberId : subscribers) {
             int messageId = messageIdCounter.getAndIncrement(); // Generate a unique message ID
             String subscriptionId = connections.getSubscriptionId(subscriberId, destination);
-            if (subscriptionId == null) {
-                sendError("No subscription found for destination: " + destination, frame, "The sender is not subscribed to the topic " + destination);
-                continue;
-            
-            }
+           
             StompFrame messageFrame = StompFrame.parse("MESSAGE\nsubscription:" + subscriptionId + "\nmessage-id:" + messageId +
             "\ndestination:" + destination + "\n" + user + "\n\n" + body + "\0");
     

@@ -75,7 +75,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
     }
 
-    public Set<Integer> getSubscribers(String channel) {
+    public CopyOnWriteArraySet<Integer> getSubscribers(String channel) {
         return topics.getOrDefault(channel, new CopyOnWriteArraySet<>());
     }
     
