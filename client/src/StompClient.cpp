@@ -7,46 +7,64 @@
 
     void StompClient::handleUserInput() {
         //lock terminate??
-        while (!terminate && !protocol.isTerminate() ) {
+        while (!terminate && !protocol.shouldTerminate() ) {
             std::string command;
             std::getline(std::cin, command);
 
             std::lock_guard<std::mutex> lock(mutex);
-            if (!isConnected && command.substr(0, 5) != "login") {
+            if (!protocol.isLoggedin() && command.substr(0, 5) != "login") {
                 std::cout << "You must log in first with the `login` command." << std::endl;
                 continue;
             }
 
+            
             protocol.processFromUser(command);
+            
 
-            if (command == "logout") {
-                std::lock_guard<std::mutex> lock(mutex);
-                isConnected = false;
-            }
+           
         }
     }
 
     void StompClient::handleServerResponses() {
-        while (!terminate && !protocol.isTerminate()) {
+        while (!terminate && !protocol.shouldTerminate()) {
             std::string response;
+            if (protocol.isLoggedin()) {
+                // std::cerr << "You must log in first with the `login` command." << std::endl;
+                
+                
+                if (connectionHandler.getFrameAscii(response,'\0')){
+                    // std::cout << "Received frame from server: " << response << std::endl;
+                    protocol.processFromServer(response);
 
-            if (connectionHandler.getFrameAscii(response,'\0')){
-                // std::cout << "Received frame from server: " << response << std::endl;
-                protocol.processFromServer(response);
+                if (response.find("CONNECTED") != std::string::npos) {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    // isConnected = true;
+                    std::cout << "Successfully connected to the server!" << std::endl;
+                } 
 
-            if (response.find("CONNECTED") != std::string::npos) {
-                std::lock_guard<std::mutex> lock(mutex);
-                isConnected = true;
-                std::cout << "Successfully connected to the server!" << std::endl;
-            } else if (response.find("ERROR") != std::string::npos) {
-                std::cerr << "Error received: " << response << std::endl;
-                std::lock_guard<std::mutex> lock(mutex);
-                // terminate = true;
-            }
-        } else if (!connectionHandler.getLine(response)) {
-                std::cerr << "Connection lost with the server." << std::endl;
-                terminate = true;
-                break;
+                if(!protocol.isLoggedin())
+                {
+                    std::cout << "Waiting for login" << std::endl;
+
+                }
+                // else{
+                //     protocol.processFromServer(response);
+                //     if (!connectionHandler.getLine(response)) {
+                //         std::cerr << "Connection lost with the server." << std::endl;
+                //         terminate = true;
+                //         break;
+                //     }
+                // }
+            
+            
+            
+            //else if (response.find("ERROR") != std::string::npos) {
+                // std::cerr << "Error received: " << response << std::endl;
+                // std::lock_guard<std::mutex> lock(mutex);
+                // // terminate = true;
+            // }
+          
+                }
             }
         }
     }
@@ -58,16 +76,20 @@ StompClient::StompClient()
 
  void StompClient::run() {
         // Attempt initial connection to the server
-        if (!connectionHandler.connect()) {
-            std::cerr << "Failed to connect to the server at stomp.cs.bgu.ac.il:7777" << std::endl;
-            return;
-        }
+        // if (!connectionHandler.connect()) {
+        //     std::cerr << "Failed to connect to the server at stomp.cs.bgu.ac.il:7777" << std::endl;
+        //     return;
+        // }
         
+     
+
+        // isConnected=true;
         // Start thread for server response handling
         std::thread serverResponseThread(&StompClient::handleServerResponses, this);
-    
+
         // Main thread handles user input
         handleUserInput();
+        
 
         serverResponseThread.join();
 

@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <sstream>
 #include <ctime>
+#include "StompProtocol.h"
 
 
      // Constructor
@@ -30,6 +31,7 @@
         std::cout << "\nReceived frame from server:" << std::endl;
         std::cout << act << std::endl;
 
+
         //STOMP frames from server
         if (frame.getCommand() == "CONNECTED") {
             std::lock_guard<std::mutex> lock(mutex);
@@ -38,30 +40,53 @@
         } else if (frame.getCommand() == "MESSAGE") {
             handleMessageFrame(frame);
         } else if (frame.getCommand() == "ERROR") {
+            std::cerr << "Error received: " << std::endl;
         } else if(frame.getCommand() == "RECEIPT") {
             std::lock_guard<std::mutex> lock(mutex);
             std::string receiptId = frame.getHeader("receipt-id"); 
             if(waitingReceipt[receiptId]=="DISCONNECT"){
                 connectionHandler.close();
-                terminate = true;
+                // terminate = true;
                 isConnected = false; 
+                loggedUser="";
+                channelSubscriptions.clear();
+                waitingReceipt.clear();
+                userEvents.clear();
+                std::cout << "\nDisconnected successfully" << std::endl;
+
             }
             waitingReceipt.erase(receiptId);
-        }
+         }
     }
+
 
      
     //parsing from user
-    void StompProtocol::processFromUser(const std::string& input) {
+    void StompProtocol::processFromUser(const std::string& input) 
+    {
         //Command word
         std::istringstream stream(input);
         std::string command;
         stream >> command;
 
+        if (!isLoggedin() && command != "login") {
+        std::cerr << "You must log in first with the `login` command." << std::endl;
+        return;
+        }
+
         //login {accept-version} {host} {login} {passcode}- CONNECT
         if (command == "login") {
             std::string hostPort, username, password;
             stream >> hostPort >> username >> password;
+
+            // Reinitialize the connection handler if necessary
+            if (!isLoggedin()) {
+                if (!connectionHandler.connect()) {
+                    std::cerr << "Failed to connect to the server" << std::endl;
+                    return;
+                }
+            }
+
             StompFrame frame = StompFrame(
                 "CONNECT",
                 {
@@ -181,6 +206,10 @@
                     },
                     "");
                 sendDisconnect(frame);
+
+            }
+            else if (command == "abort") {
+                terminate = true;
             }
         
          else {
@@ -189,15 +218,24 @@
     }
     
 
-    bool StompProtocol::isTerminate() const {
+    bool StompProtocol::shouldTerminate() const {
         return terminate;
     }
 
-    void StompProtocol::sendConnect(const StompFrame& frame){
+    bool StompProtocol::isLoggedin() const
+    {
+        return isConnected;
+    }
+
+    void StompProtocol::sendConnect(const StompFrame &frame)
+    {
+        std::cout << "Login request sent. Waiting for CONNECTED frame." << std::endl;
         loggedUser = frame.getHeader("login");
+        isConnected=true;
 
         //(!!!)Should I wait in some way to confirmation??
         sendFrame(frame);
+       
     }
 
     void StompProtocol::sendEvent(Event& event){
@@ -310,7 +348,7 @@
 
     void StompProtocol::sendDisconnect(const StompFrame& frame){
         
-        // std::cout << "Sending DISCONNECT frame:\n" << rawFrame << std::endl;
+        std::cout << "Logout request sent. Waiting for DISCONNECT RECEIPT num:" << frame.getHeader("receipt") << std::endl;
         // Update state only after successful send
         {
         std::lock_guard<std::mutex> lock(mutex);

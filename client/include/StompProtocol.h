@@ -33,7 +33,8 @@ public:
     // std::string process(const std::string& msg);
     void processFromServer(const std::string& input);
     void processFromUser(const std::string& input);
-    bool isTerminate() const;
+    bool shouldTerminate() const;
+    bool isLoggedin() const;
 
     void sendConnect(const StompFrame& frame);
     void sendEvent(Event& event);
@@ -45,5 +46,6 @@ public:
     void sendFrame(StompFrame frame);
     void handleMessageFrame(StompFrame frame);
     std::vector<Event> sortEvents(std::vector<Event> events);
+    
 };
 #endif
