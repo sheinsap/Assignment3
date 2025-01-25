@@ -35,7 +35,10 @@
         //STOMP frames from server
         if (frame.getCommand() == "CONNECTED") {
             std::lock_guard<std::mutex> lock(mutex);
+
             isConnected=true;
+            std::cout << "Login successful!" << std::endl;
+
 
             //(!!!!)??need to add logged user final 
         } else if (frame.getCommand() == "MESSAGE") {
@@ -137,6 +140,8 @@
                     const std::string& destination = subscription.second; // value
                     if (destination == channel_name) {
                         subscriptionId = id;
+                        userEvents.erase(channel_name);
+                        channelSubscriptions.erase(id);
                         break;
                     }
                 }
@@ -218,6 +223,7 @@
             }
             else if (command == "abort") {
                 terminate = true;
+                std::abort();
             }
         
          else {
@@ -262,6 +268,7 @@
 
     void StompProtocol::sendUnsubscribe(const StompFrame& frame){
         std::lock_guard<std::mutex> lock(mutex);
+
         waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
         channelSubscriptions.erase(frame.getHeader("id"));
         sendFrame(frame);

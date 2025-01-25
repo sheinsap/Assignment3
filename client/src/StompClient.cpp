@@ -38,11 +38,11 @@
                     // std::cout << "Received frame from server: " << response << std::endl;
                     protocol.processFromServer(response);
 
-                if (response.find("CONNECTED") != std::string::npos) {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    // gotCONNECTED = true;
-                    std::cout << "Successfully connected to the server!" << std::endl;
-                } 
+                // if (response.find("CONNECTED") != std::string::npos) {
+                    // std::lock_guard<std::mutex> lock(mutex);
+                    // // gotCONNECTED = true;
+                    // std::cout << "Login successful!" << std::endl;
+                // } 
                 // if (response.find("ERROR") != std::string::npos) {
                 //     std::lock_guard<std::mutex> lock(mutex);
                 //     gotCONNECTED = false;
@@ -50,7 +50,7 @@
                 // } 
 
                 // if(!protocol.isLoggedin() || !gotCONNECTED)
-                if(!protocol.isLoggedin())
+                if(protocol.isLoggedin()==false)
 
                 {
                     std::cout << "Waiting for login" << std::endl;
