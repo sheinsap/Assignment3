@@ -17,9 +17,6 @@
     StompProtocol::StompProtocol(ConnectionHandler& handler) :  terminate(false),
       isConnected(false),
       connectionHandler(handler),
-      reportsCount(0),
-      activeCount(0),
-      forcesArrivalCount(0),
       loggedUser(""),
       channelSubscriptions(),
       waitingReceipt(),
@@ -30,7 +27,7 @@
         // std::cout << "processFromServer: input from server is" << input << std::endl;
         StompFrame frame = StompFrame::parseFromServer(input);
         std::string act = frame.toRawFrame();
-        std::cout << "Received frame from server:" << std::endl;
+        std::cout << "\nReceived frame from server:" << std::endl;
         std::cout << act << std::endl;
 
         //STOMP frames from server
@@ -43,16 +40,13 @@
         } else if (frame.getCommand() == "ERROR") {
         } else if(frame.getCommand() == "RECEIPT") {
             std::lock_guard<std::mutex> lock(mutex);
-            act = frame.toRawFrame();
             std::string receiptId = frame.getHeader("receipt-id"); 
             if(waitingReceipt[receiptId]=="DISCONNECT"){
                 connectionHandler.close();
                 terminate = true;
-                isConnected = false;
-                
+                isConnected = false; 
             }
             waitingReceipt.erase(receiptId);
-            std::cout << act << std::endl;
         }
     }
 
@@ -155,6 +149,8 @@
             else if (command == "summary") {
                 std::string channel_name, user, file;
                 stream >> channel_name >> user >> file ;
+                
+
                 sendSummary(channel_name,user,file);
             }
 
@@ -245,19 +241,23 @@
 
 
         // Prepare output
+        int reportsCount=0;
+        int activeCount=0;
+        int forcesArrivalCount=0;
+        std::map<std::string,std::string> generalInformation;
         std::ostringstream output;
         output << "Channel " << channel_name << "\n";
         output << "Stats:\n";
 
-        // for (const auto& event : events) {
-        //     reportsCount++;
-        //     if (event.get_active()) {
-        //         activeCount++;
-        //     }
-        //     if (event.get_forces_arrival_at_scene()) {
-        //         forcesArrivalCount++;
-        //     }
-        // }
+        //Stats counts
+        for (const auto& event : events) {
+            generalInformation=event.get_general_information();
+            reportsCount++;
+            if(generalInformation["active"]=="true")
+                {activeCount++;}
+            if(generalInformation["forces_arrival_at_scene"]=="true")
+                {forcesArrivalCount++;}
+        }
 
         // Add stats to output
         output << " Total: " << reportsCount << "\n";
@@ -265,14 +265,14 @@
         output << " forces arrival at scene: " << forcesArrivalCount << "\n";
 
         // Event Reports
-        output << "Event Reports:\n";
+        output << "\nEvent Reports:\n\n";
 
-        int reportIndex = 0;
+        size_t reportIndex = 1;
         for (const auto& event : events) {
             std::string description = event.get_description();
             std::string summary = description.substr(0, 27);
-            if (description.size() > 27) {
-                summary += "...";
+            if (description.size() > 27 && reportIndex<events.size() ) {
+                summary += "\n\n...\n";
             }
 
             // Convert date time
@@ -342,8 +342,23 @@
 
         std::string destination = frame.getHeader("destination"); // Channel name
         std::string user = frame.getHeader("user");
-        std::string body = frame.getBody();                       // Event details
+        std::string body = frame.getBody();                       
 
+        //Check if valid input
+        if (user.empty()) {
+        std::cerr << "Error: 'user' header is missing in MESSAGE frame" << std::endl;
+        return;
+        }
+
+        if (destination.empty()) {
+        std::cerr << "Error: 'destination' header is missing in MESSAGE frame" << std::endl;
+        return;
+        }
+
+        if (body.empty()) {
+        std::cerr << "Error: 'body' header is missing in MESSAGE frame" << std::endl;
+        return;
+        }
 
         // Parse the body to extract event details
         std::istringstream bodyStream(body);
@@ -362,15 +377,16 @@
                 eventName = line.substr(12);
             } else if (line.find("date time: ") == 0) {
                 dateTime = std::stoi(line.substr(11));
-            } else if (line.find("active: ") == 0) {
-                generalInformation["active"] = line.substr(8);
-            } else if (line.find("forces_arrival_at_scene: ") == 0) {
-                generalInformation["forces_arrival_at_scene"] = line.substr(24);
+            } else if (line.find("    active: ") == 0) {
+                generalInformation["active"] = line.substr(12);
+            } else if (line.find("    forces_arrival_at_scene: ") == 0) {
+                generalInformation["forces_arrival_at_scene"] = line.substr(29);
             } else if (line.find("description: ") == 0) {
                 description = line.substr(12);
             }
         }
 
+       
         // Create an Event object
         Event event(destination, city, eventName , dateTime, description, generalInformation);
 
@@ -383,50 +399,13 @@
             userEvents[user][destination] = std::vector<Event>();
         }
         userEvents[user][destination].push_back(event);
+
         // Sort events by date, then by name
         userEvents[user][destination] = sortEvents(userEvents[user][destination]);
         
-        // std::sort(userEvents[user][destination].begin(), userEvents[user][destination].end(), [](const Event& a, const Event& b) {
-        //     return a.get_date_time() < b.get_date_time();
-        // });
-        
-        std::cout << "Event added for user '" << user << "' in channel '" << destination << "'." << std::endl;
-
-                //     reportsCount++;
-                //     std::map<std::string, std::string> general_information = event.get_general_information();  
-                //     std::string active = general_information["active"];
-                //     std::string forces_arrival = general_information["forces_arrival_at_scene"];
-                //     if(active=="true"){
-                //         activeCount++;
-                //     }
-                //     if(forces_arrival=="true"){
-                //         forcesArrivalCount++;
-                //     }
-                // }
-
-                //     // Add events to userEvents per user, per channel
-                // for (Event& event : events) {
-                //     // Add the user if not already present
-                //     if (userEvents.find(loggedUser) == userEvents.end()) {
-                //         userEvents[loggedUser] = std::map<std::string, std::vector<Event>>();
-                //     }
-
-                //     // Add the channel if not already present
-                //     if (userEvents[loggedUser].find(channel_name) == userEvents[loggedUser].end()) {
-                //         userEvents[loggedUser][channel_name] = std::vector<Event>();
-                //     }
-
-                //     // Add the event to the appropriate user's channel
-                //     userEvents[loggedUser][channel_name].push_back(event);
-                // }
-
-                // // Ensure all events are sorted by date per user, per channel
-                // for (auto& userPair : userEvents) {
-                //     for (auto& channelPair : userPair.second) {
-                //         channelPair.second = sortEvents(channelPair.second);
-                //     }
-                // }
+        std::cout << "\nEvent added for user '" << user << "' in channel '" << destination << "'." << std::endl;
     }
+
     std::vector<Event> StompProtocol::sortEvents(std::vector<Event> events)
     {
         // Sort events first by date and then by name

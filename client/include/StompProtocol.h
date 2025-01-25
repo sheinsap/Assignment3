@@ -21,9 +21,6 @@ class StompProtocol
 bool terminate;
 bool isConnected;
 ConnectionHandler& connectionHandler;
-int reportsCount;
-int activeCount;
-int forcesArrivalCount;
 std::string loggedUser;    
 std::map<std::string, std::string> channelSubscriptions; //key:id value:channel
 std::map<std::string, std::string> waitingReceipt; //key: receipts value:command
