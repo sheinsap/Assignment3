@@ -8,7 +8,7 @@ class StompClient{
     private:
     ConnectionHandler connectionHandler;
     StompProtocol protocol;
-    bool isConnected;
+    bool gotCONNECTED;
     bool terminate;
     std::mutex mutex;
 

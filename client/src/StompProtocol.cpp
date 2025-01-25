@@ -36,11 +36,19 @@
         if (frame.getCommand() == "CONNECTED") {
             std::lock_guard<std::mutex> lock(mutex);
             isConnected=true;
+
             //(!!!!)??need to add logged user final 
         } else if (frame.getCommand() == "MESSAGE") {
             handleMessageFrame(frame);
         } else if (frame.getCommand() == "ERROR") {
-            std::cerr << "Error received: " << std::endl;
+            // std::cerr << "Error received: " << std::endl;
+                connectionHandler.close();
+                // terminate = true;
+                isConnected = false; 
+                loggedUser="";
+                channelSubscriptions.clear();
+                waitingReceipt.clear();
+                userEvents.clear();
         } else if(frame.getCommand() == "RECEIPT") {
             std::lock_guard<std::mutex> lock(mutex);
             std::string receiptId = frame.getHeader("receipt-id"); 

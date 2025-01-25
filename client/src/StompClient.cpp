@@ -12,7 +12,9 @@
             std::getline(std::cin, command);
 
             std::lock_guard<std::mutex> lock(mutex);
+            // if (!protocol.isLoggedin() && command.substr(0, 5) != "login" && !gotCONNECTED) {
             if (!protocol.isLoggedin() && command.substr(0, 5) != "login") {
+
                 std::cout << "You must log in first with the `login` command." << std::endl;
                 continue;
             }
@@ -38,11 +40,18 @@
 
                 if (response.find("CONNECTED") != std::string::npos) {
                     std::lock_guard<std::mutex> lock(mutex);
-                    // isConnected = true;
+                    // gotCONNECTED = true;
                     std::cout << "Successfully connected to the server!" << std::endl;
                 } 
+                // if (response.find("ERROR") != std::string::npos) {
+                //     std::lock_guard<std::mutex> lock(mutex);
+                //     gotCONNECTED = false;
+                //     // std::cout << "Successfully connected to the server!" << std::endl;
+                // } 
 
+                // if(!protocol.isLoggedin() || !gotCONNECTED)
                 if(!protocol.isLoggedin())
+
                 {
                     std::cout << "Waiting for login" << std::endl;
 
@@ -72,7 +81,7 @@
 StompClient::StompClient()
         // : connectionHandler("stomp.cs.bgu.ac.il", 7777),
         : connectionHandler("127.0.0.1", 7777), 
-          protocol(connectionHandler), isConnected(false), terminate(false), mutex() {}
+          protocol(connectionHandler), gotCONNECTED(false), terminate(false), mutex() {}
 
  void StompClient::run() {
         // Attempt initial connection to the server
