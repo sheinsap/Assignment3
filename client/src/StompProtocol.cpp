@@ -298,9 +298,9 @@
         }
 
         // Add stats to output
-        output << " Total: " << reportsCount << "\n";
-        output << " active: " << activeCount << "\n";
-        output << " forces arrival at scene: " << forcesArrivalCount << "\n";
+        output << "Total: " << reportsCount << "\n";
+        output << "active: " << activeCount << "\n";
+        output << "forces arrival at scene: " << forcesArrivalCount << "\n";
 
         // Event Reports
         output << "\nEvent Reports:\n\n";
@@ -310,18 +310,18 @@
             std::string description = event.get_description();
             std::string summary = description.substr(0, 27);
             if (description.size() > 27 && reportIndex<events.size() ) {
-                summary += "\n\n...\n";
+                summary += "...\n\n    ...\n\n";
             }
 
             // Convert date time
             std::string dateTimeString = epochToDate(event.get_date_time());
 
             // Add event details to the output
-            output << " Report_" << reportIndex++ << ":\n";
-            output << "  city: " << event.get_city() << "\n";
-            output << "  date time: " << dateTimeString << "\n";
-            output << "  event name: " << event.get_name() << "\n";
-            output << "  summary: " << summary << "\n";
+            output << "Report_" << reportIndex++ << ":\n";
+            output << "    city: " << event.get_city() << "\n";
+            output << "    date time: " << dateTimeString << "\n";
+            output << "    event name: " << event.get_name() << "\n";
+            output << "    summary: " << summary << "\n";
         }
 
         // Write the output to the file

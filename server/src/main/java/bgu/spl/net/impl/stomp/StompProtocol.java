@@ -150,13 +150,13 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
         //destination = destination.substring(1); // Remove the leading / from the destination
 
         String body = frame.getBody();
-        int messageId = messageIdCounter.getAndIncrement(); // Generate a unique message ID
 
         // Extract the first line from the body (the user)
         String user = body.split("\n", 2)[0];
 
         // Broadcast the message to all subscribers
         for (int subscriberId : connections.getSubscribers(destination)) {
+            int messageId = messageIdCounter.getAndIncrement(); // Generate a unique message ID
             String subscriptionId = connections.getSubscriptionId(subscriberId, destination);
             if (subscriptionId == null) {
                 sendError("No subscription found for destination: " + destination, frame, "The sender is not subscribed to the topic " + destination);
