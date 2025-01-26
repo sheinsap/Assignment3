@@ -81,6 +81,7 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
 
         // Send the ERROR frame
         connections.send(connectionId, errorFrame);
+        shouldTerminate = true; // Mark connection for termination
     }
 
 
