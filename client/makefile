@@ -1,11 +1,11 @@
 CFLAGS:=-c -Wall -Weffc++ -g -std=c++11 -Iinclude
 LDFLAGS:=-lboost_system -lpthread
 
-all: StompWCIClient
+all: StompECIClient
 
-# Build StompWCIClient executable
-StompWCIClient: bin/ConnectionHandler.o bin/StompClient.o bin/event.o bin/StompFrame.o bin/StompProtocol.o bin/SingletonCounter.o
-	g++ -o bin/StompWCIClient bin/ConnectionHandler.o bin/StompClient.o bin/event.o bin/StompFrame.o bin/StompProtocol.o bin/SingletonCounter.o $(LDFLAGS)
+# Build StompECIClient executable
+StompECIClient: bin/ConnectionHandler.o bin/StompClient.o bin/event.o bin/StompFrame.o bin/StompProtocol.o bin/SingletonCounter.o
+	g++ -o bin/StompECIClient bin/ConnectionHandler.o bin/StompClient.o bin/event.o bin/StompFrame.o bin/StompProtocol.o bin/SingletonCounter.o $(LDFLAGS)
 
 # Object files for each source file
 bin/ConnectionHandler.o: src/ConnectionHandler.cpp include/ConnectionHandler.h

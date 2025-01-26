@@ -1,4 +1,5 @@
 #include "../include/ConnectionHandler.h"
+#include "ConnectionHandler.h"
 
 using boost::asio::ip::tcp;
 
@@ -11,10 +12,20 @@ using std::string;
 ConnectionHandler::ConnectionHandler(string host, short port) : host_(host), port_(port), io_service_(),
                                                                 socket_(io_service_) {}
 
+//Default constructor
+ConnectionHandler::ConnectionHandler() : host_(), port_(), io_service_(),
+                                                                socket_(io_service_) {}
+
+
 ConnectionHandler::~ConnectionHandler() {
 	close();
 }
 
+void ConnectionHandler::setHostPort(std::string host, short port)
+{
+	host_=host;
+	port_=port;
+}
 bool ConnectionHandler::connect() {
 	std::cout << "Starting connect to "
 	          << host_ << ":" << port_ << std::endl;

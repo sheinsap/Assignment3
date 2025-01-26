@@ -37,7 +37,7 @@ void StompClient::handleServerResponses() {
 }
 
 StompClient::StompClient()
-    : connectionHandler("127.0.0.1", 7777), 
+    : connectionHandler(), 
         protocol(connectionHandler), gotCONNECTED(false), terminate(false), mutex() {}
 
 void StompClient::run() {

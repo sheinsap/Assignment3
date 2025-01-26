@@ -84,6 +84,16 @@ void StompProtocol::processFromUser(const std::string& input)
         std::string hostPort, username, password;
         stream >> hostPort >> username >> password;
 
+        //parse host:port
+        size_t colonPos = hostPort.find(':');
+        if (colonPos == std::string::npos) {
+            throw std::invalid_argument("Invalid host:port format. Expected format is host:port (e.g., 127.0.0.1:7777).");
+        }
+        std::string host = hostPort.substr(0, colonPos);
+        std::string portStr = hostPort.substr(colonPos + 1);
+        short port = static_cast<short>(std::stoi(portStr));
+        connectionHandler.setHostPort(host,port);
+
         // Reinitialize the connection handler if necessary
         if (!isLoggedin()) {
             if (!connectionHandler.connect()) {
