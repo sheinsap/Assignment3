@@ -26,11 +26,10 @@ StompProtocol::StompProtocol(ConnectionHandler& handler) :
     mutex() {}
 
 void StompProtocol::processFromServer(const std::string& input) {
-    // std::cout << "processFromServer: input from server is" << input << std::endl;
     StompFrame frame = StompFrame::parseFromServer(input);
     std::string act = frame.toRawFrame();
-    std::cout << "\nReceived frame from server:" << std::endl;
-    std::cout << act << std::endl;
+    // std::cout << "\nReceived frame from server:" << std::endl;
+    // std::cout << act << std::endl;
 
 
     //STOMP frames from server
@@ -38,32 +37,28 @@ void StompProtocol::processFromServer(const std::string& input) {
         std::lock_guard<std::mutex> lock(mutex);
         isConnected=true;
         std::cout << "Login successful!" << std::endl;
-
-        //(!!!!)??need to add logged user final 
     } else if (frame.getCommand() == "MESSAGE") {
         handleMessageFrame(frame);
     } else if (frame.getCommand() == "ERROR") {
-        // std::cerr << "Error received: " << std::endl;
         connectionHandler.close();
-        // terminate = true;
         isConnected = false; 
         loggedUser="";
         channelSubscriptions.clear();
         waitingReceipt.clear();
         userEvents.clear();
+        std::cout << "\nError received:" <<"\n" << act << "\nDisconnected." << std::endl;
+
     } else if(frame.getCommand() == "RECEIPT") {
         std::lock_guard<std::mutex> lock(mutex);
         std::string receiptId = frame.getHeader("receipt-id"); 
         if(waitingReceipt[receiptId]=="DISCONNECT"){
             connectionHandler.close();
-            // terminate = true;
             isConnected = false; 
             loggedUser="";
             channelSubscriptions.clear();
             waitingReceipt.clear();
             userEvents.clear();
             std::cout << "\nDisconnected successfully" << std::endl;
-
         }
         waitingReceipt.erase(receiptId);
     }
@@ -109,9 +104,6 @@ void StompProtocol::processFromUser(const std::string& input)
         sendConnect(frame);
     }
 
-    ///(!!!) is needed?
-    // std::lock_guard<std::mutex> lock(mutex);
-    // if(isConnected){
     //join {channel_name} - SUBSCRIBE 
     else if (command == "join") {
         std::string channel_name;
@@ -172,8 +164,7 @@ void StompProtocol::processFromUser(const std::string& input)
         stream >> eventsPath ;
         names_and_events eventsData=parseEventsFile(eventsPath);
         
-        //Channel name + events vector 
-        // const std::string& channel_name = eventsData.channel_name;
+        //events vector 
         std::vector<Event>& events = eventsData.events;
             
         //send all the events
@@ -193,25 +184,7 @@ void StompProtocol::processFromUser(const std::string& input)
         sendSummary(channel_name,user,file);
     }
 
-            //(!!!) Once the client receives the RECEIPT frame, it should close the socket
-            //(!!!) and await further user commands.
-
-
-        //          if (command == "login") {
-        //     std::string hostPort, username, password;
-        //     stream >> hostPort >> username >> password;
-        //     StompFrame frame = StompFrame(
-        //         "CONNECT",
-        //         {
-        //             {"accept-version", "1.2"},
-        //             {"host", "stomp.cs.bgu.ac.il"},
-        //             {"login", username},
-        //             {"passcode", password}
-        //         },
-        //         "\n\0");
-        //     sendConnect(frame);
-        // }
-            //logut - DISCONNECT
+    //logout - DISCONNECT
     else if (command == "logout") {
         StompFrame frame = StompFrame(
             "DISCONNECT",
@@ -247,14 +220,10 @@ void StompProtocol::sendConnect(const StompFrame &frame)
     std::cout << "Login request sent. Waiting for CONNECTED frame." << std::endl;
     loggedUser = frame.getHeader("login");
     isConnected=true;
-
-    //(!!!)Should I wait in some way to confirmation??
-    sendFrame(frame);
-    
+    sendFrame(frame);    
 }
 
 void StompProtocol::sendEvent(Event& event){
-    //(!!!) ?? frame.getHeader("receipt");
     StompFrame frame = StompFrame::parseEvent(event);
     sendFrame(frame);
 }
@@ -262,15 +231,12 @@ void StompProtocol::sendEvent(Event& event){
 void StompProtocol::sendSubscribe(const StompFrame& frame){
     std::lock_guard<std::mutex> lock(mutex);
     channelSubscriptions[frame.getHeader("id")] = frame.getHeader("destination");
-    //(!!!)what about the case of many receipts per id's 
     waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
     sendFrame(frame);
-
 }
 
 void StompProtocol::sendUnsubscribe(const StompFrame& frame){
     std::lock_guard<std::mutex> lock(mutex);
-
     waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
     channelSubscriptions.erase(frame.getHeader("id"));
     sendFrame(frame);
@@ -342,8 +308,6 @@ void StompProtocol::sendSummary(const std::string& channel_name, const std::stri
     }
 
     // Write the output to the file
-    // std::ofstream outputFile(file, std::ios::out); // std::ios::out ensures it opens for writing
-    // if (!outputFile.is_open()) {
     std::ofstream outputFile(file);
     if (!outputFile) {
         std::cerr << "Failed to open file '" << file << "' for writing." << std::endl;
@@ -366,14 +330,11 @@ std::string StompProtocol::epochToDate(time_t epoch) {
 void StompProtocol::sendDisconnect(const StompFrame& frame){
     
     std::cout << "Logout request sent. Waiting for DISCONNECT RECEIPT num:" << frame.getHeader("receipt") << std::endl;
-    // Update state only after successful send
     {
     std::lock_guard<std::mutex> lock(mutex);
     sendFrame(frame);
     waitingReceipt[frame.getHeader("receipt")] = frame.getCommand();
-    //(!!!)does it wait to receipt?
     loggedUser="";
-    //delete event in field? 
     }
 }
 
@@ -383,7 +344,6 @@ void StompProtocol::sendFrame(StompFrame frame){
     if (!result) {
         std::cerr << "\nFailed to send " << frame.getCommand() << " frame:\n" << std::endl;
         std::cerr << rawFrame << std::endl;
-
         return; // Exit without modifying state
     }
     else{

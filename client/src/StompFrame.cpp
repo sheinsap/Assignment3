@@ -32,14 +32,6 @@ std::string StompFrame::getBody() const {
 }
 
 StompFrame StompFrame::parseFromServer(const std::string& frame) {
-    // Check if the frame ends with the null character
-    // if (frame.empty() || frame.back() != '\0') {
-    //     return StompFrame("ERROR", {{"message", "Frame does not terminate with null character"}}, "");
-    // }
-
-    // Remove the null character from the end
-    // std::string trimmedFrame = frame.substr(0, frame.size() - 1);
-
     std::istringstream stream(frame);
     std::string line;
 
