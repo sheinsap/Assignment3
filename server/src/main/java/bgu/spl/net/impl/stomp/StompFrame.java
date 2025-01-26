@@ -27,15 +27,7 @@ public class StompFrame {
     }
 
     public static StompFrame parse(String frame) {
-        System.out.println("Parsing frame: " + frame); // Add this for debugging
-        // Check if the frame ends with the null character
-        //if (!frame.endsWith("\0")) {
-        //return parse("ERROR\nmessage: Frame does not terminate with null character\n\n\u0000");
-        //}
-
-        // Remove the null character before parsing
-        //frame = frame.substring(0, frame.length() - 1);
-
+      
         String[] lines = frame.split("\n"); // Split the frame into lines
         String command = lines[0];            // First line is the command
         Map<String, String> headers = new HashMap<>();

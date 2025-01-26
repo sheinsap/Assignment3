@@ -21,7 +21,6 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<StompFrame> {
             buffer.clear(); // Reset the buffer after processing
 
             String frameString = new String(frameBytes, StandardCharsets.UTF_8); // Convert bytes to string
-            System.out.println("Received frame: " + frameString);
             return StompFrame.parse(frameString); // Parse the raw frame into a StompFrame object
         }
 

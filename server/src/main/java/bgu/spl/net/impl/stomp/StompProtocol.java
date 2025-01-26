@@ -150,7 +150,6 @@ public class StompProtocol implements StompMessagingProtocol<StompFrame>{
             sendError("SEND frame must include a destination header", frame, "");
             return;
         }
-        //destination = destination.substring(1); // Remove the leading / from the destination
 
         String body = frame.getBody();
 
