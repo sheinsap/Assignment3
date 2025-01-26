@@ -17,12 +17,10 @@ Event::Event(std::string channel_name, std::string city, std::string name, int d
              std::string description, std::map<std::string, std::string> general_information)
     : channel_name(channel_name), city(city), name(name),
       date_time(date_time), description(description), general_information(general_information), eventOwnerUser("")
-{
-}
+{}
 
 Event::~Event()
-{
-}
+{}
 
 void Event::setEventOwnerUser(std::string setEventOwnerUser) {
     eventOwnerUser = setEventOwnerUser;

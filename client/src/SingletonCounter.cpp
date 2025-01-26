@@ -7,7 +7,7 @@
 //     std::atomic<int> nextId;
 //     std::atomic<int> nextReceipt;
 
-    // Constructor is private to prevent direct instantiation
+// Constructor is private to prevent direct instantiation
 SingletonCounter::SingletonCounter(): nextId(0), nextReceipt(0) {}
 
 // public:
@@ -21,7 +21,7 @@ SingletonCounter& SingletonCounter::getInstance() {
     return instance;
 }
 
-    // Methods to get the next ID and Receipt
+// Methods to get the next ID and Receipt
 int SingletonCounter::getNextId() {
     return nextId.fetch_add(1);
 }
